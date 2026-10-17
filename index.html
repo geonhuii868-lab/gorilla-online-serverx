@@ -1,0 +1,2328 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>물 만난 고릴라 키우기 🦍⚔️</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        game: ['Jua', 'sans-serif'],
+                        sans: ['Noto Sans KR', 'sans-serif'],
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        pop: {
+                            '0%': { transform: 'scale(0.8)', opacity: '0' },
+                            '50%': { transform: 'scale(1.1)' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        }
+                    },
+                    animation: {
+                        float: 'float 3s ease-in-out infinite',
+                        pop: 'pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* Keep the resource bar compact so it never grows upward over the game. */
+        #gameFooter { flex-shrink: 0; position: sticky; bottom: 0; }
+        #gameFooter > div { width: 100%; max-width: 28rem; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        #gameFooter .footer-currencies { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; }
+        #gameFooter .currency-card { min-width: 0; flex: 1 1 0; padding: 6px 8px; }
+        #gameFooter .currency-card > div { min-width: 0; }
+        #gameFooter #fishCount, #gameFooter #bananaCount { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(10px, 2.8vw, 16px); }
+        #gameFooter .footer-note { display: none; }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        /* Damage Popups */
+        .damage-pop {
+            position: absolute;
+            animation: moveUpAndFade 1.2s ease-out forwards;
+            pointer-events: none;
+            font-weight: 900;
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+            z-index: 50;
+        }
+        @keyframes moveUpAndFade {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            30% { opacity: 1; transform: translateY(-30px) scale(1.5); }
+            100% { opacity: 0; transform: translateY(-70px) scale(0.8); }
+        }
+
+        /* Click Attack Swing FX */
+        .click-hit-effect {
+            position: absolute;
+            z-index: 60;
+            pointer-events: none;
+            font-size: 3rem;
+            animation: clickHitPop 0.7s ease-out forwards;
+            filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.9));
+        }
+        @keyframes clickHitPop {
+            0% { transform: scale(0.2) rotate(-45deg); opacity: 1; }
+            40% { transform: scale(1.6) rotate(20deg); opacity: 1; }
+            100% { transform: scale(1) rotate(60deg); opacity: 0; }
+        }
+
+        .gorilla-attack-swing {
+            animation: gorillaSwing 0.3s ease-in-out;
+        }
+        @keyframes gorillaSwing {
+            0% { transform: scale(1) translateX(0); }
+            50% { transform: scale(1.25) translateX(20px) rotate(15deg); }
+            100% { transform: scale(1) translateX(0); }
+        }
+
+        /* Projectiles & Skill FX */
+        .skill-fx-projectile {
+            position: absolute;
+            z-index: 40;
+            pointer-events: none;
+            will-change: transform, left, top;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+            animation: projectileFly 0.8s linear forwards;
+        }
+        @keyframes projectileFly {
+            0% { transform: scale(0.6) rotate(0deg); opacity: 1; }
+            50% { transform: scale(1.4) rotate(270deg); opacity: 1; }
+            100% { left: 85% !important; transform: scale(1) rotate(540deg); opacity: 0; }
+        }
+
+        .spin-flatfish-orbit {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            width: 160px;
+            height: 160px;
+            margin-top: -80px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 45;
+            animation: orbitSpin 1.2s ease-out forwards;
+            border: 4px dashed rgba(56, 189, 248, 0.9);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.7);
+        }
+        @keyframes orbitSpin {
+            0% { transform: rotate(0deg) scale(0.3); opacity: 0; }
+            30% { opacity: 1; transform: rotate(360deg) scale(1.4); }
+            100% { transform: rotate(1080deg) scale(1.1); opacity: 0; }
+        }
+
+        .dance-wave-screen {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.7) 0%, rgba(147, 51, 234, 0.85) 100%);
+            z-index: 35;
+            pointer-events: none;
+            animation: wavePulse 0.9s ease-in-out forwards;
+        }
+        @keyframes wavePulse {
+            0% { opacity: 0; transform: scale(0.7); }
+            40% { opacity: 0.95; transform: scale(1.08); }
+            100% { opacity: 0; transform: scale(1); }
+        }
+
+        .kunhee-punch {
+            position: absolute;
+            left: 10%;
+            top: 20%;
+            font-size: 4.5rem;
+            z-index: 45;
+            pointer-events: none;
+            animation: punchRush 1.0s ease-out forwards;
+        }
+        @keyframes punchRush {
+            0% { transform: scale(0.3) translate(0, 0); opacity: 0; }
+            50% { transform: scale(1.7) translate(140px, 10px); opacity: 1; }
+            100% { transform: scale(1.1) translate(280px, -20px); opacity: 0; }
+        }
+
+        .hammer-forward-smash {
+            position: absolute;
+            z-index: 48;
+            pointer-events: none;
+            font-size: 4.5rem;
+            filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.95));
+            animation: hammerSmashForward 0.6s ease-out forwards;
+        }
+        @keyframes hammerSmashForward {
+            0% { transform: translateY(-70px) rotate(-50deg) scale(0.4); opacity: 0; }
+            40% { transform: translateY(10px) rotate(15deg) scale(1.4); opacity: 1; }
+            70% { transform: translateY(20px) rotate(30deg) scale(1.2); opacity: 1; }
+            100% { transform: translateY(35px) rotate(45deg) scale(0.8); opacity: 0; }
+        }
+
+        .shadow-clones-effect {
+            position: absolute;
+            inset: 0;
+            z-index: 42;
+            pointer-events: none;
+            animation: cloneRush 1.1s ease-out forwards;
+        }
+        @keyframes cloneRush {
+            0% { opacity: 0; transform: scale(0.4); }
+            40% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0; transform: scale(1); }
+        }
+
+        .wave-blast-effect {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(6, 182, 212, 0) 0%, rgba(56, 189, 248, 0.9) 50%, rgba(59, 130, 246, 0) 100%);
+            z-index: 44;
+            pointer-events: none;
+            animation: waveSweep 1.0s ease-out forwards;
+        }
+        @keyframes waveSweep {
+            0% { transform: translateX(-100%); opacity: 0.2; }
+            50% { opacity: 1; }
+            100% { transform: translateX(100%); opacity: 0; }
+        }
+
+        .laser-beam-effect {
+            position: absolute;
+            left: 10%;
+            right: 0;
+            height: 60px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(90deg, rgba(56, 189, 248, 0.95), rgba(234, 179, 8, 0.95), rgba(239, 68, 68, 0.95));
+            box-shadow: 0 0 35px #38bdf8, 0 0 60px #f59e0b;
+            z-index: 45;
+            animation: laserPulse 1.2s ease-out forwards;
+            pointer-events: none;
+        }
+        @keyframes laserPulse {
+            0% { transform: translateY(-50%) scaleY(0.1); opacity: 0.2; }
+            40% { transform: translateY(-50%) scaleY(1.6); opacity: 1; }
+            80% { transform: translateY(-50%) scaleY(1.2); opacity: 0.8; }
+            100% { transform: translateY(-50%) scaleY(0); opacity: 0; }
+        }
+
+        .meteor-effect {
+            position: absolute;
+            right: 30%;
+            top: 0;
+            font-size: 6rem;
+            z-index: 48;
+            pointer-events: none;
+            animation: meteorDrop 1.2s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
+        }
+        @keyframes meteorDrop {
+            0% { transform: translate(140px, -180px) rotate(-45deg) scale(0.4); opacity: 0.2; }
+            60% { opacity: 1; transform: translate(-10px, 50px) rotate(-10deg) scale(1.5); }
+            100% { transform: translate(-40px, 100px) rotate(10deg) scale(1.1); opacity: 0; }
+        }
+
+        .blessing-shield-effect {
+            position: absolute;
+            left: 5%;
+            top: 20%;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.85) 0%, rgba(244, 63, 94, 0.5) 70%, rgba(0,0,0,0) 100%);
+            box-shadow: 0 0 40px #f59e0b;
+            z-index: 46;
+            pointer-events: none;
+            animation: shieldPulse 1.4s ease-out forwards;
+        }
+        @keyframes shieldPulse {
+            0% { transform: scale(0.2); opacity: 0.2; }
+            50% { transform: scale(1.5); opacity: 1; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+
+        .cooldown-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.85);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #fde047;
+            pointer-events: none;
+        }
+
+        .evolution-aura {
+            position: absolute;
+            inset: -14px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #f59e0b, #ef4444, #ec4899, #8b5cf6, #06b6d4, #10b981, #f59e0b);
+            animation: spinAura 2.5s linear infinite, auraGlow 1.5s ease-in-out infinite alternate;
+            filter: blur(10px);
+            opacity: 0.9;
+        }
+        @keyframes spinAura {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes auraGlow {
+            0% { filter: blur(8px) brightness(1); transform: rotate(0deg) scale(0.98); }
+            100% { filter: blur(14px) brightness(1.4); transform: rotate(180deg) scale(1.05); }
+        }
+
+        .god-halo-ring {
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 3px dashed #f59e0b;
+            box-shadow: 0 0 20px #f59e0b, inset 0 0 15px #f59e0b;
+            animation: rotateHalo 6s linear infinite;
+            pointer-events: none;
+            z-index: 15;
+        }
+        @keyframes rotateHalo {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .gorilla-evolved-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            filter: contrast(1.1) brightness(1.05);
+        }
+
+        /* 고레벨 스킬별 전용 이펙트 */
+        .blackhole-fx, .spacetime-fx, .rage-fx, .sun-fx, .creator-fx {
+            position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+            pointer-events:none; z-index:48; overflow:hidden;
+        }
+        .blackhole-core { width:150px; height:150px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:3.5rem;
+            background:radial-gradient(circle,#020617 0 28%,#312e81 38%,#7c3aed 49%,rgba(139,92,246,.15) 68%,transparent 72%);
+            box-shadow:0 0 30px #8b5cf6,0 0 70px #4c1d95; animation:blackholeSuck 1.25s ease-in-out forwards; }
+        .blackhole-core:before,.blackhole-core:after { content:''; position:absolute; width:210px;height:70px;border:7px solid #c4b5fd;border-left-color:#7c3aed;border-right-color:#e879f9;border-radius:50%; transform:rotate(-25deg); box-shadow:0 0 18px #a78bfa; animation:blackholeRing .8s linear infinite; }
+        .blackhole-core:after { transform:rotate(55deg); border-color:#6d28d9; border-left-color:#f0abfc; animation-direction:reverse; }
+        @keyframes blackholeSuck { 0%{transform:scale(0.05) rotate(0);opacity:0} 35%{transform:scale(1.1) rotate(90deg);opacity:1} 100%{transform:scale(.65) rotate(300deg);opacity:0} }
+        @keyframes blackholeRing { to{rotate:360deg} }
+        .spacetime-fx { background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(34,211,238,.0) 0deg,rgba(34,211,238,.0) 12deg,rgba(34,211,238,.5) 13deg,rgba(99,102,241,.0) 18deg); animation:timeWarp 1.3s ease-out forwards; }
+        .spacetime-core { font-size:5rem; text-shadow:0 0 14px #67e8f9,0 0 35px #6366f1; animation:timeCore 1.3s ease-in-out forwards; }
+        @keyframes timeWarp { 0%{transform:scale(.1) rotate(0);opacity:0} 35%{opacity:1} 100%{transform:scale(1.8) rotate(160deg);opacity:0} }
+        @keyframes timeCore { 0%,100%{transform:scale(.3) rotate(-90deg);opacity:0} 35%{transform:scale(1.3) rotate(0);opacity:1} 75%{transform:scale(.8) rotate(90deg);opacity:1} }
+        .rage-fx { justify-content:flex-start; background:linear-gradient(90deg,transparent,rgba(239,68,68,.4),rgba(251,146,60,.65),transparent); animation:rageFlash .85s ease-out forwards; }
+        .rage-core { margin-left:35%;font-size:6rem;filter:drop-shadow(0 0 18px #ef4444); animation:ragePunch .85s cubic-bezier(.2,.8,.2,1) forwards; }
+        @keyframes rageFlash { 0%{opacity:0;transform:translateX(-100%)} 35%{opacity:1} 100%{opacity:0;transform:translateX(100%)} }
+        @keyframes ragePunch { 0%{transform:translateX(-180px) scale(.2) rotate(-40deg);opacity:0} 45%{transform:translateX(30px) scale(1.4) rotate(12deg);opacity:1} 100%{transform:translateX(180px) scale(.8);opacity:0} }
+        .sun-fx { background:radial-gradient(circle at center,rgba(255,255,190,.95),rgba(251,146,60,.65) 18%,rgba(239,68,68,.35) 40%,transparent 72%); animation:sunBurst 1.25s ease-out forwards; }
+        .sun-core { font-size:6rem;filter:drop-shadow(0 0 25px #facc15); animation:sunGrow 1.25s ease-out forwards; }
+        @keyframes sunBurst { 0%{opacity:0;transform:scale(.1)} 25%{opacity:1} 100%{opacity:0;transform:scale(1.8)} }
+        @keyframes sunGrow { 0%{transform:scale(.05) rotate(0)} 35%{transform:scale(1.3) rotate(90deg)} 100%{transform:scale(.6) rotate(220deg);opacity:0} }
+        .creator-fx { background:radial-gradient(circle,rgba(255,255,255,.95),rgba(250,204,21,.45) 18%,rgba(168,85,247,.4) 42%,transparent 70%); animation:creatorJudgment 1.6s ease-out forwards; }
+        .creator-core { font-size:6rem;filter:drop-shadow(0 0 20px #fff) drop-shadow(0 0 35px #facc15); animation:creatorCrown 1.6s ease-in-out forwards; }
+        .creator-rays { position:absolute;inset:-50%;background:repeating-conic-gradient(rgba(255,255,255,.0) 0deg 8deg,rgba(250,204,21,.65) 9deg 10deg,rgba(255,255,255,0) 11deg 20deg); animation:creatorSpin 1.6s linear forwards; }
+        @keyframes creatorJudgment { 0%{opacity:0;transform:scale(.05)} 20%{opacity:1} 65%{opacity:1} 100%{opacity:0;transform:scale(1.5)} }
+        @keyframes creatorCrown { 0%{transform:translateY(-100px) scale(.1) rotate(-45deg);opacity:0} 35%{transform:translateY(0) scale(1.35) rotate(0);opacity:1} 100%{transform:translateY(30px) scale(.7);opacity:0} }
+        @keyframes creatorSpin { to{transform:rotate(360deg)} }
+
+        /* 새로 제작한 스킬 1~10 전용 이펙트 */
+        .skill-unique-fx{position:absolute;inset:0;z-index:49;pointer-events:none;overflow:hidden;display:flex;align-items:center;justify-content:center}
+        .banana-comet{position:absolute;left:12%;top:42%;font-size:3.4rem;filter:drop-shadow(0 0 12px #fde047);animation:bananaCometFly .85s cubic-bezier(.2,.8,.2,1) forwards}
+        .banana-comet:after{content:' ';position:absolute;width:100px;height:14px;right:60%;top:45%;border-radius:99px;background:linear-gradient(90deg,transparent,#fde047,#fff7ae);transform:rotate(-18deg);filter:blur(3px)}
+        @keyframes bananaCometFly{0%{transform:translate(-40px,40px) rotate(-70deg) scale(.3);opacity:0}25%{opacity:1}100%{transform:translate(270px,-35px) rotate(500deg) scale(1.25);opacity:0}}
+        .fish-vortex{position:absolute;width:155px;height:155px;border:5px dotted #67e8f9;border-radius:50%;box-shadow:0 0 20px #22d3ee,inset 0 0 25px #0891b2;animation:fishVortex .95s ease-out forwards}
+        .fish-vortex span{position:absolute;font-size:2.5rem;filter:drop-shadow(0 0 8px #a5f3fc)}.fish-vortex span:nth-child(1){left:-20px;top:35px}.fish-vortex span:nth-child(2){right:-20px;bottom:28px}
+        @keyframes fishVortex{0%{transform:scale(.1) rotate(0);opacity:0}35%{transform:scale(1.15) rotate(180deg);opacity:1}100%{transform:scale(1.7) rotate(540deg);opacity:0}}
+        .disco-burst{position:absolute;inset:0;background:radial-gradient(circle,rgba(244,114,182,.38),transparent 65%);animation:discoBurst .95s ease-out forwards}
+        .disco-ring{position:absolute;width:90px;height:90px;border:5px solid #f0abfc;border-radius:50%;box-shadow:0 0 22px #e879f9;animation:discoRing .9s ease-out forwards}.disco-ring.r2{border-color:#67e8f9;animation-delay:.12s}.disco-ring.r3{border-color:#fde047;animation-delay:.24s}
+        .disco-dancer{position:absolute;font-size:4.5rem;filter:drop-shadow(0 0 16px #f0abfc);animation:discoDance .9s ease-in-out forwards}
+        @keyframes discoBurst{0%{opacity:0}30%{opacity:1}100%{opacity:0}}@keyframes discoRing{0%{transform:scale(.2);opacity:0}35%{opacity:1}100%{transform:scale(4);opacity:0}}@keyframes discoDance{0%{transform:rotate(-35deg) scale(.3)}40%{transform:rotate(20deg) scale(1.3)}100%{transform:rotate(360deg) scale(.6);opacity:0}}
+        .kunhee-toss-fx{position:absolute;left:8%;top:25%;font-size:4.5rem;filter:drop-shadow(0 0 15px #fb7185);animation:kunheeTossNew 1s cubic-bezier(.15,.75,.2,1) forwards}
+        .kunhee-toss-fx:after{content:'💫';position:absolute;font-size:2.5rem;left:35%;top:-20px;animation:tossStar .6s linear infinite}
+        @keyframes kunheeTossNew{0%{transform:translate(-50px,70px) rotate(-100deg) scale(.2);opacity:0}35%{opacity:1}75%{transform:translate(240px,-50px) rotate(420deg) scale(1.4);opacity:1}100%{transform:translate(310px,70px) rotate(650deg) scale(.5);opacity:0}}@keyframes tossStar{to{transform:rotate(360deg) scale(.7)}}
+        .puffy-hammer{position:absolute;left:44%;top:20%;font-size:5rem;filter:drop-shadow(0 0 18px #fbbf24);animation:puffyHammer .55s ease-in forwards}
+        .hammer-shock{position:absolute;left:28%;top:45%;width:45%;height:18px;border-radius:50%;border:5px solid #fde68a;box-shadow:0 0 20px #f59e0b;animation:hammerShock .65s ease-out forwards}
+        @keyframes puffyHammer{0%{transform:translateY(-100px) rotate(-40deg) scale(.4);opacity:0}55%{transform:translateY(25px) rotate(20deg) scale(1.5);opacity:1}100%{transform:translateY(5px) rotate(45deg) scale(.8);opacity:0}}@keyframes hammerShock{0%{transform:scale(.1);opacity:0}35%{opacity:1}100%{transform:scale(2.5);opacity:0}}
+        .fish-mirage{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-evenly;font-size:3.7rem}
+        .fish-mirage span{filter:drop-shadow(0 0 12px #67e8f9);animation:fishMirage .8s ease-out forwards}.fish-mirage span:nth-child(2){animation-delay:.12s}.fish-mirage span:nth-child(3){animation-delay:.24s}
+        @keyframes fishMirage{0%{transform:translateX(-80px) scale(.2);opacity:0}45%{opacity:.9;transform:translateX(15px) scale(1.2)}100%{transform:translateX(80px) scale(.7);opacity:0}}
+        .tidal-wall{position:absolute;left:-10%;right:-10%;bottom:-35%;height:90%;border-radius:50% 50% 0 0;background:linear-gradient(0deg,rgba(3,105,161,.95),rgba(34,211,238,.6),rgba(224,242,254,.2));box-shadow:0 -12px 35px #22d3ee;animation:tidalWall .95s ease-out forwards}
+        .tidal-wall:before{content:'🌊  🌊  🌊  🌊';position:absolute;top:-35px;left:0;right:0;text-align:center;font-size:3rem;white-space:nowrap}
+        @keyframes tidalWall{0%{transform:translateY(100%) scaleX(.6);opacity:0}35%{opacity:1}70%{transform:translateY(-12%) scaleX(1.08)}100%{transform:translateY(-110%) scaleX(1.2);opacity:0}}
+        .banana-meteor-new{position:absolute;right:24%;top:-10%;font-size:5rem;filter:drop-shadow(0 0 18px #fb923c);animation:bananaMeteorNew 1s cubic-bezier(.5,0,.8,.4) forwards}
+        .banana-meteor-new:after{content:'';position:absolute;left:10%;top:65%;width:22px;height:120px;background:linear-gradient(#fde047,rgba(249,115,22,0));transform:rotate(-30deg);filter:blur(8px)}
+        @keyframes bananaMeteorNew{0%{transform:translate(100px,-130px) rotate(-50deg) scale(.3);opacity:0}55%{opacity:1}100%{transform:translate(-130px,230px) rotate(300deg) scale(1.6);opacity:0}}
+        .fish-cannon{position:absolute;left:10%;right:0;top:48%;height:12px;background:linear-gradient(90deg,transparent,#67e8f9,#fff,#38bdf8);box-shadow:0 0 16px #22d3ee,0 0 38px #38bdf8;transform-origin:left;animation:fishCannon .75s ease-out forwards}
+        .fish-cannon:before{content:'🐟⚡';position:absolute;left:15%;top:-40px;font-size:2.7rem;filter:drop-shadow(0 0 12px #67e8f9)}.fish-cannon:after{content:'';position:absolute;inset:-18px 0;border-top:2px solid #e0f2fe;border-bottom:2px solid #22d3ee;transform:skewY(-8deg)}
+        @keyframes fishCannon{0%{transform:scaleX(.02);opacity:0}25%{opacity:1}65%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:0}}
+        .geonhee-blessing-new{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(251,191,36,.3),rgba(236,72,153,.15) 35%,transparent 70%);animation:blessingBloom 1.45s ease-out forwards}
+        .blessing-halo-new{position:absolute;width:180px;height:180px;border:7px double #fde68a;border-radius:50%;box-shadow:0 0 25px #fbbf24,inset 0 0 25px #f9a8d4;animation:blessingHalo 1.4s ease-out forwards}
+        .blessing-crown-new{position:relative;font-size:5rem;text-shadow:0 0 18px #fef08a,0 0 35px #f472b6;animation:blessingCrown 1.4s cubic-bezier(.2,.8,.2,1) forwards}
+        .blessing-sparkle-new{position:absolute;font-size:1.8rem;color:#fff7ae;animation:blessingSparkle 1s ease-out forwards}
+        @keyframes blessingBloom{0%{opacity:0}25%{opacity:1}100%{opacity:0}}@keyframes blessingHalo{0%{transform:scale(.1) rotate(-90deg);opacity:0}40%{transform:scale(1) rotate(90deg);opacity:1}100%{transform:scale(1.6) rotate(270deg);opacity:0}}@keyframes blessingCrown{0%{transform:translateY(45px) scale(.1);opacity:0}35%{transform:translateY(-8px) scale(1.3);opacity:1}100%{transform:translateY(-45px) scale(.7);opacity:0}}@keyframes blessingSparkle{0%{transform:scale(.1) rotate(0);opacity:0}40%{opacity:1}100%{transform:translate(var(--sx),var(--sy)) scale(1.4) rotate(220deg);opacity:0}}
+
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between font-sans dark select-none">
+    <header class="bg-slate-800/90 backdrop-blur-md border-b border-slate-700/80 sticky top-0 z-40 px-4 py-3 shadow-lg">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <h1 class="font-game text-xl text-amber-400 flex items-center gap-2">
+                <span>🦍</span> 물 만난 고릴라 키우기
+            </h1>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleTheme()" class="p-2 bg-slate-700/80 hover:bg-slate-600 rounded-xl transition text-slate-300">
+                    <i id="themeIcon" class="fa-solid fa-sun text-amber-300"></i>
+                </button>
+                <button onclick="confirmReset()" class="p-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-700/50 rounded-xl transition text-rose-300 text-xs font-bold">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto w-full flex-1 p-4 flex flex-col gap-4">
+        <!-- Navigation Tabs -->
+        <div class="grid grid-cols-7 gap-1 bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/70">
+            <button id="tabMainBtn" onclick="switchTab('main')" class="py-2.5 rounded-xl font-game text-xs sm:text-sm transition flex items-center justify-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg">
+                🏠 마을
+            </button>
+            <button id="tabShopBtn" onclick="switchTab('shop')" class="py-2.5 rounded-xl font-game text-xs sm:text-sm transition flex items-center justify-center gap-1 text-slate-400 hover:text-slate-200">
+                🗡️ 상점
+            </button>
+            <button id="tabDungeonBtn" onclick="switchTab('dungeon')" class="py-2.5 rounded-xl font-game text-xs sm:text-sm transition flex items-center justify-center gap-1 text-slate-400 hover:text-slate-200">
+                ⚔️ 던전
+            </button>
+            <button id="tabSpaceDungeonBtn" onclick="switchTab('spaceDungeon')" class="py-2.5 rounded-xl font-game text-[10px] sm:text-sm transition flex items-center justify-center gap-1 text-slate-400 hover:text-slate-200">
+                🚀 우주 던전
+            </button>
+            <button id="tabSkillUpgradeBtn" onclick="switchTab('skillUpgrade')" class="py-2.5 rounded-xl font-game text-xs sm:text-sm transition flex items-center justify-center gap-1 text-slate-400 hover:text-slate-200">
+                ✨ 연구소
+            </button>
+            <button id="tabPlayersBtn" onclick="switchTab('players')" class="py-2.5 rounded-xl font-game text-[10px] sm:text-sm transition flex items-center justify-center gap-1 text-slate-400 hover:text-slate-200">
+                👥 접속자
+            </button>
+            <button id="tabDeveloperBtn" onclick="switchTab('developer')" class="py-2.5 rounded-xl font-game text-[10px] sm:text-sm transition flex items-center justify-center gap-1 text-slate-400 hover:text-slate-200">
+                🛠️ 개발자
+            </button>
+        </div>
+
+        <!-- Main Town Tab -->
+        <section id="viewMain" class="flex flex-col gap-4 animate-pop">
+            <div class="bg-slate-800/90 rounded-3xl p-5 border border-slate-700 shadow-xl text-center relative overflow-hidden">
+                <!-- Evolution Aura & God Ring -->
+                <div id="evolutionAura" class="evolution-aura hidden"></div>
+
+                <div class="relative z-10 flex flex-col items-center">
+                    <h2 id="gorillaTitle" class="font-game text-2xl text-amber-300 mb-3 drop-shadow">
+                        LV.1 아기 고릴라 👶🦍
+                    </h2>
+
+                    <div class="relative mb-4">
+                        <div id="godHaloRing" class="god-halo-ring hidden"></div>
+                        <div id="gorillaAvatarBox" class="w-32 h-32 rounded-full bg-slate-900 border-4 border-amber-400/80 flex items-center justify-center overflow-hidden shadow-2xl transition-all duration-300">
+                            <span id="mainGorillaEmoji" class="text-7xl select-none">🦍</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 inline-flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-700 text-xs text-amber-300 font-game">
+                        <span>⚔️ 장착 무기:</span>
+                        <span id="equippedSwordBadgeName" class="text-white">장착 무기 없음</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-sm font-semibold mb-4 bg-slate-900/50 p-3 rounded-2xl border border-slate-700/50 w-full">
+                        <div class="bg-slate-800 p-2.5 rounded-xl flex items-center justify-between border border-slate-700">
+                            <span class="text-slate-400"><i class="fa-solid fa-hand-fist text-rose-400 mr-1"></i> 공격력</span>
+                            <span id="statAtk" class="text-rose-400 font-game text-lg">10</span>
+                        </div>
+                        <div class="bg-slate-800 p-2.5 rounded-xl flex items-center justify-between border border-slate-700">
+                            <span class="text-slate-400"><i class="fa-solid fa-heart text-emerald-400 mr-1"></i> 체력</span>
+                            <span id="statHp" class="text-emerald-400 font-game text-lg">100 / 100</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 text-left w-full">
+                        <div class="flex justify-between text-xs font-bold text-slate-300 mb-1">
+                            <span>성장 경험치 (광어 먹이기)</span>
+                            <span id="xpText">0 / 10 광어</span>
+                        </div>
+                        <div class="w-full bg-slate-900 rounded-full h-4 overflow-hidden border border-slate-700 p-0.5">
+                            <div id="xpBar" class="bg-gradient-to-r from-amber-500 to-yellow-400 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                        <button onclick="feedGorilla()" class="py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-game text-lg rounded-2xl shadow-lg border-b-4 border-teal-800 active:border-b-0 active:translate-y-1 transition flex items-center justify-center gap-1.5">
+                            <span class="text-xl">🐟</span> 1개 먹이기
+                        </button>
+                        <button onclick="feedAllGorilla()" class="py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-game text-lg rounded-2xl shadow-lg border-b-4 border-orange-800 active:border-b-0 active:translate-y-1 transition flex items-center justify-center gap-1.5">
+                            <span class="text-xl">⚡</span> 광어 모두 먹이기
+                        </button>
+                    </div>
+
+                    <!-- Relic Vault UI -->
+                    <div class="mt-4 bg-slate-900/70 rounded-2xl p-4 border border-amber-500/30 text-left w-full">
+                        <div class="flex items-center justify-between mb-3 border-b border-slate-700/60 pb-2">
+                            <h3 class="font-game text-lg text-amber-300 flex items-center gap-2">
+                                <span>🏛️</span> 고대의 유물 보관함
+                            </h3>
+                            <span class="text-xs text-amber-400/90 font-bold bg-amber-950/60 border border-amber-500/40 px-2 py-0.5 rounded-lg">
+                                드롭률 1% (던전)
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-3">던전 토벌 시 1% 확률로 드롭되며, 희귀할수록 높은 스탯 버프를 제공합니다.</p>
+                        
+                        <div id="relicContainer" class="grid grid-cols-1 gap-2">
+                            <!-- Relics rendered dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sword Shop Tab -->
+        <section id="viewShop" class="hidden flex-col gap-4 animate-pop">
+            <div class="bg-slate-800/90 rounded-3xl p-5 border border-slate-700 shadow-xl">
+                <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-3">
+                    <div>
+                        <h3 class="font-game text-xl text-amber-300 flex items-center gap-2">
+                            <i class="fa-solid fa-store text-amber-400"></i> 광어 검 상점 (550종)
+                        </h3>
+                        <p class="text-xs text-slate-400">모은 광어로 초강력 무기들을 수집해 고릴라를 최강으로 키워보세요!</p>
+                    </div>
+                </div>
+
+                <div id="swordShopContainer" class="grid grid-cols-1 gap-3 max-h-[500px] overflow-y-auto pr-1">
+                    <!-- Expanded Swords Rendered via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Dungeon Tab -->
+        <section id="viewDungeon" class="hidden flex-col gap-4 animate-pop">
+            <div id="dungeonSelectArea" class="bg-slate-800/90 rounded-3xl p-5 border border-slate-700 shadow-xl">
+                <h3 class="font-game text-xl text-amber-400 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-map-location-dot"></i> 무한 던전 (60개 스테이지)
+                </h3>
+                <p class="text-xs text-slate-400 mb-3">높은 단계일수록 압도적인 광어와 더 많은 바나나(50% 확률)를 드롭합니다!</p>
+                <div class="grid grid-cols-1 gap-3 max-h-[460px] overflow-y-auto pr-1" id="dungeonList">
+                    <!-- Expanded Dungeons Rendered via JS -->
+                </div>
+            </div>
+
+            <!-- Active Battle Screen -->
+            <div id="dungeonBattleArea" class="hidden flex-col gap-3">
+                <div class="bg-slate-800/90 p-3 rounded-2xl border border-slate-700 flex justify-between items-center">
+                    <div>
+                        <span id="activeDungeonName" class="font-game text-lg text-amber-300">잔디 동산</span>
+                        <span class="ml-2 text-xs bg-amber-600/80 px-2.5 py-1 rounded-full text-amber-100 font-bold animate-pulse">🎯 화면을 직접 터치/클릭하여 공격하세요!</span>
+                    </div>
+                    <button onclick="leaveDungeon()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-game text-xs rounded-xl shadow transition active:scale-95">
+                        <i class="fa-solid fa-door-open"></i> 마을로 귀환
+                    </button>
+                </div>
+
+                <div id="battleCanvas" onclick="handleManualAttack(event)" class="relative w-full h-80 bg-slate-950 rounded-3xl border-2 border-slate-700 overflow-hidden shadow-inner flex flex-col justify-between p-4 cursor-crosshair select-none">
+                    <div id="danceEffectOverlay" class="hidden dance-wave-screen"></div>
+
+                    <!-- Visual Click Prompt Overlay -->
+                    <div class="absolute top-12 left-1/2 -translate-x-1/2 pointer-events-none z-10 bg-slate-900/60 backdrop-blur-sm border border-amber-500/30 px-3 py-1 rounded-full text-[11px] text-amber-300 font-game animate-bounce">
+                        ⚔️ 탭/클릭으로 직접 적을 타격하세요!
+                    </div>
+
+                    <div class="flex justify-between items-center z-10 gap-1">
+                        <div class="flex items-center gap-1 bg-slate-900/80 px-2 py-1 rounded-xl border border-slate-700">
+                            <span class="text-xs">⚔️</span>
+                            <div class="text-[11px] font-bold text-amber-400">
+                                처치: <span id="killCountText" class="text-white font-game">0</span>
+                            </div>
+                        </div>
+
+                        <!-- Gorilla HP Display inside Canvas -->
+                        <div class="bg-rose-950/80 border border-rose-500/50 px-2 py-1 rounded-xl text-[11px] font-bold text-rose-300 flex items-center gap-1">
+                            <span>❤️</span>
+                            <span id="dungeonGorillaHpText" class="font-game text-xs text-rose-200">100/100</span>
+                        </div>
+
+                        <div class="bg-cyan-900/60 border border-cyan-500/40 px-2 py-1 rounded-xl text-[11px] font-bold text-cyan-300 flex items-center gap-1">
+                            <span>🐟</span>
+                            <span id="battleEarnedFish" class="font-game text-xs text-cyan-200">0</span>
+                        </div>
+
+                        <div class="bg-amber-900/60 border border-amber-500/40 px-2 py-1 rounded-xl text-[11px] font-bold text-amber-300 flex items-center gap-1">
+                            <span>🍌</span>
+                            <span id="battleEarnedBanana" class="font-game text-xs text-amber-200">0</span>
+                        </div>
+                    </div>
+
+                    <div id="fieldContainer" class="relative flex-1 w-full my-1 overflow-hidden flex items-center justify-between">
+                        <div class="relative flex flex-col items-center z-20">
+                            <div class="w-16 bg-slate-900/90 rounded-full h-2.5 border border-slate-700 overflow-hidden mb-1">
+                                <div id="dungeonGorillaHp" class="bg-emerald-500 h-full w-full transition-all"></div>
+                            </div>
+                            <div class="relative">
+                                <div id="dungeonGorillaAvatarBox" class="w-20 h-20 rounded-full bg-slate-800 border-2 border-amber-400 flex items-center justify-center overflow-hidden shadow-lg">
+                                    <span id="dungeonGorillaEmoji" class="text-5xl select-none">🦍</span>
+                                </div>
+                                <span id="dungeonGorillaSwordIcon" class="absolute -right-2 -bottom-1 text-2xl filter drop-shadow">🗡️</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Skill Quick Bar relocated to dedicated bottom area of Dungeon Canvas -->
+                    <div class="relative z-30 bg-slate-900/95 p-2 rounded-2xl border border-slate-700/80 shadow-lg mt-1">
+                        <div class="text-[10px] text-amber-300 font-game mb-1 text-center flex items-center justify-center gap-1">
+                            <span>⚡</span> 스킬 퀵슬롯 (터치하여 즉시 발동)
+                        </div>
+                        <div id="skillBarContainer" class="grid grid-cols-5 gap-1.5 max-h-24 overflow-y-auto pr-0.5">
+                            <!-- Skill buttons rendered dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Space Dungeon Tab -->
+        <section id="viewSpaceDungeon" class="hidden flex-col gap-4 animate-pop">
+            <div id="spaceDungeonSelectArea" class="bg-slate-800/90 rounded-3xl p-5 border border-indigo-700/60 shadow-xl">
+                <h3 class="font-game text-xl text-indigo-300 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-rocket"></i> 우주 던전 (50개 스테이지)
+                </h3>
+                <p id="spaceDungeonIntro" class="text-xs text-slate-400 mb-3">건희 보스를 쓰러뜨리면 열리는 우주 모험! 행성, 성운, 블랙홀을 돌파하세요.</p>
+                <div id="spaceDungeonLocked" class="hidden p-4 rounded-2xl bg-slate-950/70 border border-indigo-800 text-center text-indigo-200 font-game">
+                    🔒 우주 던전은 60스테이지 건희 보스를 처치하면 열립니다.
+                </div>
+                <div class="grid grid-cols-1 gap-3 max-h-[460px] overflow-y-auto pr-1" id="spaceDungeonList">
+                    <!-- Space stages rendered dynamically -->
+                </div>
+            </div>
+            <div id="spaceDungeonBattleMount" class="flex flex-col gap-3"></div>
+        </section>
+
+        <!-- Players Tab -->
+        <section id="viewPlayers" class="hidden flex-col gap-4 animate-pop">
+            <div class="bg-slate-800/90 rounded-3xl p-5 border border-cyan-700/50 shadow-xl">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-game text-xl text-cyan-300">👥 접속 중인 플레이어</h3>
+                    <button onclick="renderPlayersList()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg">새로고침 ↻</button>
+                </div>
+                <p class="text-xs text-slate-400 mb-4">현재 이 브라우저에서 확인 가능한 플레이어 목록입니다.</p>
+                <div id="playersList" class="flex flex-col gap-2"></div>
+                <div class="mt-5 border-t border-slate-700 pt-4">
+                    <h3 class="font-game text-lg text-amber-300 mb-3">🏆 실시간 랭킹</h3>
+                    <p class="text-xs text-slate-400 mb-3">레벨이 높은 순서로 표시됩니다.</p>
+                    <div id="playersRanking" class="flex flex-col gap-2"></div>
+                </div>
+                <div class="mt-4 rounded-xl border border-amber-700/50 bg-amber-950/30 p-3 text-xs text-amber-200 leading-relaxed">
+                    ⚠️ 이 게임은 현재 HTML 파일만으로 실행 중이라, 다른 사람의 접속을 인터넷으로 실시간 확인하려면 온라인 서버/데이터베이스 연결이 필요해요. 지금 목록은 이 브라우저에서 열린 게임 세션만 표시합니다.
+                </div>
+            </div>
+        </section>
+
+        <!-- Developer Mode Tab -->
+        <section id="viewDeveloper" class="hidden flex-col gap-4 animate-pop">
+            <div class="bg-slate-800/90 rounded-3xl p-5 border border-rose-700/50 shadow-xl">
+                <h3 class="font-game text-xl text-rose-300 mb-2">🛠️ 개발자 모드</h3>
+                <p class="text-xs text-slate-300 mb-4">지정된 개발자 닉네임으로 접속했을 때만 이 브라우저에서 열립니다.</p>
+                <div id="developerLocked" class="rounded-xl border border-rose-700/50 bg-rose-950/30 p-4 text-sm text-rose-200">🔒 개발자 계정으로 로그인해야 사용할 수 있어요.</div>
+                <div id="developerControls" class="hidden flex-col gap-3 mt-3">
+                    <label class="text-xs text-slate-300">대상 플레이어</label>
+                    <select id="developerTarget" class="w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-white"></select>
+                    <label class="text-xs text-slate-300">지급 항목</label>
+                    <select id="developerRewardType" class="w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-white" onchange="updateDeveloperRewardFields()">
+                        <option value="sword">⚔️ 특별한 검</option><option value="currency">🐟 재화 지급</option><option value="level">📈 레벨 지급</option><option value="title">👑 칭호 지급</option><option value="ability">✨ 특별 능력</option>
+                    </select>
+                    <div id="developerRewardFields" class="flex flex-col gap-2"></div>
+                    <button onclick="grantDeveloperReward()" class="w-full rounded-xl bg-gradient-to-r from-rose-600 to-purple-600 p-3 font-bold text-white">선택한 보상 지급</button>
+                    <div id="developerResult" class="text-sm text-cyan-200"></div>
+                </div>
+                <div class="mt-4 rounded-xl border border-amber-700/50 bg-amber-950/30 p-3 text-xs text-amber-200 leading-relaxed">⚠️ 현재 HTML 단독 버전은 같은 브라우저 안에서만 동작해요. 다른 컴퓨터의 플레이어에게 실제 지급하려면 서버 로그인과 서버 측 개발자 권한 검증이 필요합니다. 아래 개발자 닉네임 잠금은 보안 인증이 아니며 파일을 수정하면 우회할 수 있어요.</div>
+            </div>
+        </section>
+
+        <!-- Skill Upgrade Tab -->
+        <section id="viewSkillUpgrade" class="hidden flex-col gap-4 animate-pop">
+            <div class="bg-slate-800/90 rounded-3xl p-5 border border-slate-700 shadow-xl">
+                <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-3">
+                    <div>
+                        <h3 class="font-game text-xl text-amber-300 flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> 스킬 연구소 (강화)
+                        </h3>
+                        <p class="text-xs text-slate-400">던전에서 적을 처치해 모은 바나나(🍌)로 스킬 계수와 위력을 대폭 강화하세요!</p>
+                    </div>
+                </div>
+
+                <div id="skillUpgradeListContainer" class="grid grid-cols-1 gap-3 max-h-[500px] overflow-y-auto pr-1">
+                    <!-- Skill Upgrades Rendered via JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer id="gameFooter" class="bg-slate-800 border-t border-slate-700 py-2 px-3 sticky bottom-0 z-40">
+        <div class="max-w-md mx-auto flex justify-between items-center font-game">
+            <div class="footer-currencies flex items-center gap-3">
+                <div class="currency-card flex items-center gap-1.5 bg-slate-900/80 px-3 py-1.5 rounded-2xl border border-slate-700">
+                    <span class="text-xl animate-pulse">🐟</span>
+                    <div>
+                        <div class="text-[9px] text-slate-400 font-sans font-normal">광어</div>
+                        <div id="fishCount" class="text-amber-400 text-base leading-none">0</div>
+                    </div>
+                </div>
+                <div class="currency-card flex items-center gap-1.5 bg-slate-900/80 px-3 py-1.5 rounded-2xl border border-slate-700">
+                    <span class="text-xl animate-bounce">🍌</span>
+                    <div>
+                        <div class="text-[9px] text-slate-400 font-sans font-normal">바나나</div>
+                        <div id="bananaCount" class="text-yellow-300 text-base leading-none">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-note text-right text-xs text-slate-400 font-sans">
+                <div>초등학교 6학년 1반 전용</div>
+                <div class="text-amber-400/80 font-game">물만난 광어 소프트웨어</div>
+            </div>
+        </div>
+    </footer>
+
+    <div id="npcModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border-2 border-amber-500/80 rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center relative animate-pop">
+            <div class="text-6xl mb-3">🧑‍💼</div>
+            <h3 class="font-game text-2xl text-amber-300 mb-2">NPC 이건희</h3>
+            <p id="npcDialogText" class="text-sm text-slate-200 mb-6 leading-relaxed font-sans bg-slate-900/60 p-4 rounded-2xl border border-slate-700">
+                "10레벨을 달성했구나! 축하해! 이제 더 위험하고 보상이 큰 고난이도 무한 던전들이 해금되었어. 특수 스킬 [건희 던지기]도 선물로 줄게!"
+            </p>
+            <button onclick="closeNpcModal()" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-game text-lg rounded-xl shadow-lg active:scale-95 transition">
+                확인했습니다!
+            </button>
+        </div>
+    </div>
+
+    <div id="skillUnlockModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border-2 border-amber-400 rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center relative animate-pop">
+            <div class="text-6xl mb-2 animate-bounce" id="unlockedSkillIcon">🎉</div>
+            <div class="inline-block bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-full text-xs font-game mb-2">
+                NEW SKILL UNLOCKED!
+            </div>
+            <h3 class="font-game text-2xl text-amber-300 mb-1">스킬을 얻었다!</h3>
+            <div id="unlockedSkillName" class="font-game text-xl text-white mb-3">스킬 이름</div>
+            <p id="unlockedSkillDesc" class="text-xs text-slate-300 mb-6 font-sans bg-slate-900/70 p-3 rounded-2xl border border-slate-700">
+                스킬 설명
+            </p>
+            <button onclick="closeSkillUnlockModal()" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-game text-lg rounded-xl shadow-lg active:scale-95 transition">
+                멋져요! 사용해보기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const EVOLVED_GORILLA_IMG = "https://images.unsplash.com/photo-1540573133985-758581242a11?auto=format&fit=crop&w=400&q=80";
+
+        let state = {
+            level: 1,
+            xp: 0,
+            maxXp: 10,
+            fish: 0,
+            bananas: 0,
+            baseAtk: 10,
+            baseMaxHp: 100,
+            currentHp: 100,
+            hasMetKunhee: false,
+            spaceUnlocked: false,
+            darkMode: true,
+            equippedSwordId: null,
+            ownedSwords: [],
+            relicCounts: {
+                common: 0,
+                rare: 0,
+                epic: 0,
+                legendary: 0,
+                mythic: 0
+            },
+            unlockedSkillIds: [1],
+            skillLevels: {}, // skillId -> level
+            playerName: ''
+        };
+
+        const RELICS_DATA = [
+            { id: 'common', name: '녹슨 조개 유물', rarity: '일반', icon: '🐚', dropWeight: 60, color: 'text-slate-300', borderColor: 'border-slate-600', atkBonus: 5, hpBonus: 20, desc: '공격력 +5, 체력 +20' },
+            { id: 'rare', name: '푸른 산호 유물', rarity: '희귀', icon: '🪸', dropWeight: 25, color: 'text-cyan-400', borderColor: 'border-cyan-600', atkBonus: 15, hpBonus: 60, desc: '공격력 +15, 체력 +60' },
+            { id: 'epic', name: '빛나는 등대 유물', rarity: '영웅', icon: '🕯️', dropWeight: 10, color: 'text-purple-400', borderColor: 'border-purple-600', atkBonus: 40, hpBonus: 150, desc: '공격력 +40, 체력 +150' },
+            { id: 'legendary', name: '심해 여왕의 여의주', rarity: '전설', icon: '🔮', dropWeight: 4.5, color: 'text-amber-400', borderColor: 'border-amber-500', atkBonus: 120, hpBonus: 450, desc: '공격력 +120, 체력 +450' },
+            { id: 'mythic', name: '신화의 태양 광어 석상', rarity: '신화', icon: '🗿', dropWeight: 0.5, color: 'text-rose-400 animate-pulse', borderColor: 'border-rose-500', atkBonus: 350, hpBonus: 1200, desc: '공격력 +350, 체력 +1200' }
+        ];
+
+        const SKILLS_DATA = [
+            { id: 1, name: '바나나', icon: '🍌', reqLv: 1, cd: 0, mult: 1.0, multPerLv: 0.5, baseBananaCost: 5, targetType: 'single', desc: '바나나 투척 (단일 타겟)' },
+            { id: 2, name: '광어팽이', icon: '🐟🌀', reqLv: 3, cd: 3.0, mult: 1.6, multPerLv: 0.8, baseBananaCost: 15, targetType: 'circle', range: 35, desc: '주변 회전 공격 (근접 범위)' },
+            { id: 3, name: '광어춤', icon: '💃', reqLv: 5, cd: 5.0, mult: 2.8, multPerLv: 1.2, baseBananaCost: 30, targetType: 'screen', desc: '전체 댄스 파동 (화면 전체)' },
+            { id: 4, name: '건희던지기', icon: '🧑‍💼', reqLv: 10, cd: 7.0, mult: 4.5, multPerLv: 2.0, baseBananaCost: 60, targetType: 'line', range: 50, desc: '건희 돌격 (직선 침투 공격)' },
+            { id: 5, name: '뾱뾱망치', icon: '🔨', reqLv: 15, cd: 9.0, mult: 7.0, multPerLv: 3.0, baseBananaCost: 120, desc: '뾱뾱이 강타 (전방 3연타 난무)' },
+            { id: 6, name: '광어분신', icon: '🐟✨', reqLv: 20, cd: 12.0, mult: 10.0, multPerLv: 4.5, baseBananaCost: 250, targetType: 'circle', range: 60, desc: '분신 난무 (중형 범위)' },
+            { id: 7, name: '파도폭발', icon: '🌊💥', reqLv: 25, cd: 15.0, mult: 14.0, multPerLv: 6.0, baseBananaCost: 500, targetType: 'screen', desc: '광범위 파도 폭발 (화면 전체)' },
+            { id: 8, name: '운석바나나', icon: '☄️🍌', reqLv: 30, cd: 18.0, mult: 20.0, multPerLv: 9.0, baseBananaCost: 1000, targetType: 'circle', range: 45, desc: '화염 운석 낙하 (낙하지점 범위)' },
+            { id: 9, name: '광어포', icon: '⚡🐟', reqLv: 40, cd: 22.0, mult: 30.0, multPerLv: 14.0, baseBananaCost: 2500, targetType: 'line', range: 100, desc: '관통 관통 레이저 (전방 관통)' },
+            { id: 10, name: '건희축복', icon: '💖👑', reqLv: 50, cd: 30.0, mult: 0.0, multPerLv: 0.1, baseBananaCost: 5000, targetType: 'buff', desc: '체력 40% 회복 + 공격력 버프' },
+            { id: 11, name: '블랙홀광어', icon: '🕳️🐟', reqLv: 60, cd: 25.0, mult: 45.0, multPerLv: 20.0, baseBananaCost: 10000, targetType: 'screen', desc: '암흑 블랙홀 생성 (화면 전체)' },
+            { id: 12, name: '시공간단열', icon: '⏳💥', reqLv: 70, cd: 28.0, mult: 65.0, multPerLv: 30.0, baseBananaCost: 25000, targetType: 'screen', desc: '시공간 파괴 균열 (화면 전체)' },
+            { id: 13, name: '건희분노강타', icon: '🤬🥊', reqLv: 80, cd: 32.0, mult: 95.0, multPerLv: 45.0, baseBananaCost: 60000, targetType: 'line', range: 100, desc: '건희의 분노 펀치 (초대형 범위)' },
+            { id: 14, name: '태양폭발', icon: '☀️💥', reqLv: 90, cd: 35.0, mult: 140.0, multPerLv: 65.0, baseBananaCost: 150000, targetType: 'screen', desc: '태양의 핵융합 폭발 (화면 전체)' },
+            { id: 15, name: '신화창조자', icon: '👑✨', reqLv: 100, cd: 40.0, mult: 220.0, multPerLv: 100.0, baseBananaCost: 400000, targetType: 'screen', desc: '절대신의 심판 (최강 전체 강타)' }
+        ];
+
+        let skillCooldowns = {};
+
+        const SWORDS_DATA = [
+            { id: 'sw_wood', name: '연습용 목검', icon: '🗡️', cost: 15, bonusAtk: 12, desc: '가벼워서 휘두르기 좋은 나무 검' },
+            { id: 'sw_bamboo', name: '튼튼한 죽도', icon: '🎋', cost: 25, bonusAtk: 20, desc: '탄력 있는 대나무로 단단하게 조립된 장검' },
+            { id: 'sw_fishbone', name: '광어 가시검', icon: '⚔️', cost: 40, bonusAtk: 30, desc: '단단한 광어 가시로 다듬어 만든 날카로운 검' },
+            { id: 'sw_stone', name: '돌도끼 검', icon: '🪨', cost: 65, bonusAtk: 48, desc: '무겁지만 한 번 찍히면 무시무시한 암석검' },
+            { id: 'sw_wave', name: '파도 베기검', icon: '🌊', cost: 100, bonusAtk: 75, desc: '시원한 파도의 힘이 담긴 청량한 칼날' },
+            { id: 'sw_coral', name: '붉은 산호검', icon: '🪸', cost: 160, bonusAtk: 120, desc: '깊은 바닷속 단단한 산호초를 깎아 제작한 도검' },
+            { id: 'sw_lightning', name: '번개 광어검', icon: '⚡', cost: 250, bonusAtk: 180, desc: '찌릿찌릿 전기를 뿜어내는 광어 검' },
+            { id: 'sw_shell', name: '대왕 조개검', icon: '🐚', cost: 400, bonusAtk: 290, desc: '조개 껍데기 층이 겹겹이 겹친 단단한 방어겸용 검' },
+            { id: 'sw_king', name: '전설의 킹광어검', icon: '🌟', cost: 600, bonusAtk: 450, desc: '광어 왕국 국왕이 전수해 준 극강의 보검' },
+            { id: 'sw_golden_knife', name: '황금 회칼', icon: '🔪', cost: 900, bonusAtk: 650, desc: '광어의 살집을 부드럽고 가리개 없이 베어버리는 명검' },
+            { id: 'sw_flame', name: '불꽃 사시미검', icon: '🔥', cost: 1200, bonusAtk: 900, desc: '타오르는 화염의 열기로 적을 잘라내는 정밀검' },
+            { id: 'sw_poison', name: '독가시 광어검', icon: '🧪', cost: 1800, bonusAtk: 1300, desc: '복어의 맹독과 광어의 가시가 융합된 위협적인 무기' },
+            { id: 'sw_ice', name: '빙하 얼음검', icon: '❄️', cost: 2500, bonusAtk: 1800, desc: '차디찬 만년설의 기운이 감도는 냉기검' },
+            { id: 'sw_meteor', name: '운석 파편검', icon: '☄️', cost: 3500, bonusAtk: 2500, desc: '우주에서 떨어진 운석을 제련하여 만든 중직한 검' },
+            { id: 'sw_dragon', name: '용비늘 광어검', icon: '🐉', cost: 5000, bonusAtk: 3500, desc: '신비로운 드래곤의 비늘로 벼려낸 기적의 칼날' },
+            { id: 'sw_shadow', name: '그림자 닌자검', icon: '🥷', cost: 7200, bonusAtk: 5000, desc: '어둠 속에 모습을 숨긴 채 소리 없이 스쳐 지나가는 도검' },
+            { id: 'sw_void', name: '암흑 심해검', icon: '🌌', cost: 10000, bonusAtk: 7000, desc: '깊은 바닷속 암흑의 마력이 깃든 검' },
+            { id: 'sw_magma', name: '용암 대검', icon: '🌋', cost: 14000, bonusAtk: 10000, desc: '화산 심층부의 펄펄 끓는 용암이 흐르는 묵직한 대검' },
+            { id: 'sw_holy', name: '성스러운 뾱뾱검', icon: '✨', cost: 20000, bonusAtk: 14000, desc: '뾱뾱 소리와 함께 오라를 뿜어내는 수호검' },
+            { id: 'sw_gale', name: '폭풍 태풍검', icon: '🌪️', cost: 30000, bonusAtk: 21000, desc: '회오리 바람을 일으켜 수많은 적들을 몰아치는 광풍검' },
+            { id: 'sw_galaxy', name: '은하수 광어검', icon: '🌠', cost: 45000, bonusAtk: 30000, desc: '우주의 별빛을 베어내는 환상의 무기' },
+            { id: 'sw_diamond', name: '다이아몬드 참격검', icon: '💎', cost: 68000, bonusAtk: 48000, desc: '어떤 장갑도 단번에 파괴하는 극강의 경도를 가진 보석검' },
+            { id: 'sw_god', name: '신화의 제왕검', icon: '👑', cost: 100000, bonusAtk: 75000, desc: '세계관 최강 고릴라만이 쥘 수 있는 절대신검' },
+            { id: 'sw_plasma', name: '플라즈마 레이저검', icon: '🔋', cost: 150000, bonusAtk: 110000, desc: '고온 플라즈마 에너지 필드를 가동해 모든 단면을 녹여내는 검' },
+            { id: 'sw_nebula', name: '성운 초신성검', icon: '💫', cost: 220000, bonusAtk: 160000, desc: '우주 성운의 폭발력을 머금은 찬란한 도검' },
+            { id: 'sw_valkyrie', name: '발키리 천상도', icon: '🪽', cost: 320000, bonusAtk: 240000, desc: '천상의 수호신이 선사하는 빛의 나날' },
+            { id: 'sw_abyss', name: '심연 악마사냥검', icon: '🦇', cost: 500000, bonusAtk: 350000, desc: '심연 마족들을 소멸시키던 피의 흑도' },
+            { id: 'sw_quasar', name: '퀘이사 섬광검', icon: '🔮', cost: 800000, bonusAtk: 550000, desc: '초대질량 블랙홀 중심부에서 뿜어지는 강력한 에너지를 머금은 무기' },
+            { id: 'sw_aurora', name: '극광 오로라검', icon: '🌈', cost: 1200000, bonusAtk: 800000, desc: '북극 하늘의 아름다운 광채로 적을 현혹하는 미검' },
+            { id: 'sw_leviathan', name: '레비아탄 정복검', icon: '🐋', cost: 1900000, bonusAtk: 1250000, desc: '전설 속 바다 괴수를 물리친 무한 지배자 대검' },
+            { id: 'sw_titan', name: '거인 파쇄 대검', icon: '🗿', cost: 3000000, bonusAtk: 1800000, desc: '거인의 뼈와 운석으로 단조된 묵직한 중검' },
+            { id: 'sw_sol', name: '솔라리스 태양검', icon: '☀️', cost: 5000000, bonusAtk: 2900000, desc: '태양의 중력과 화염 열기를 고스란히 담아낸 광열의 대검' },
+            { id: 'sw_chronos', name: '시간 시공절단검', icon: '⏳', cost: 8000000, bonusAtk: 4500000, desc: '시공간의 균열을 가르는 신비로운 초월 무기' },
+            { id: 'sw_ether', name: '에테르 영혼검', icon: '👻', cost: 13000000, bonusAtk: 7000000, desc: '영혼의 입자를 조종하여 물질적 한계를 뛰어넘어 공격하는 영도' },
+            { id: 'sw_sun', name: '태양 일식마검', icon: '🌑', cost: 20000000, bonusAtk: 11000000, desc: '태양의 핵 열기로 모든 물질을 녹여버리는 검' },
+            { id: 'sw_ragnarok', name: '라그나로크 종말검', icon: '⚔️🔥', cost: 32000000, bonusAtk: 18000000, desc: '신들의 황혼과 함께 모든 세상을 멸망시켰다는 전설의 대검' },
+            { id: 'sw_dimension', name: '차원 파괴도', icon: '🌀', cost: 50000000, bonusAtk: 28000000, desc: '차원의 경계를 일격에 베어내는 명검' },
+            { id: 'sw_chaos', name: '혼돈 지옥칼날', icon: '👁️', cost: 90000000, bonusAtk: 50000000, desc: '태초의 혼돈에서 태어난 기이하고 날카로운 검' },
+            { id: 'sw_universe', name: '전지전능 고릴라신검', icon: '🌌🦍', cost: 150000000, bonusAtk: 80000000, desc: '우주 만물을 다스리는 차원 절대자의 상징' },
+            { id: 'sw_celestial', name: '성좌 지배자의 천상검', icon: '⭐', cost: 250000000, bonusAtk: 130000000, desc: '수백억 개의 별들이 가리키는 성좌의 절대무기' },
+            { id: 'sw_hyperion', name: '하이페리온 광신검', icon: '💠', cost: 400000000, bonusAtk: 220000000, desc: '초월적 빛의 결정이 응축된 절대 지배검' },
+            { id: 'sw_antimatter', name: '반물질 응축도', icon: '⚛️', cost: 650000000, bonusAtk: 360000000, desc: '물질과 접촉 즉시 소멸 반응을 일으키는 최첨단 초월검' },
+            { id: 'sw_multiverse', name: '다중우주 종말도', icon: '🪐⚔️', cost: 1000000000, bonusAtk: 600000000, desc: '모든 평행우주를 일시에 멸망시킬 신의 칼날' },
+            { id: 'sw_eternity', name: '영원 불멸도', icon: '⌛', cost: 1800000000, bonusAtk: 1000000000, desc: '시간의 흐름조차 고정시켜 손상되지 않는 영원의 신기' },
+            { id: 'sw_infinity', name: '무한 초월 고릴라검', icon: '♾️🦍', cost: 3000000000, bonusAtk: 1800000000, desc: '한계를 뛰어넘어 영원히 번성하는 무한 검' },
+            { id: 'sw_genesis', name: '창세기 창조의 신검', icon: '🕊️', cost: 5500000000, bonusAtk: 3200000000, desc: '우주 탄생의 여명기 빛으로 단조된 절대 창조검' },
+            { id: 'sw_primordial', name: '태초 광어신의 섬광', icon: '🐟⚡', cost: 10000000000, bonusAtk: 6000000000, desc: '광어신이 태초에 내린 축복의 결정체' },
+            { id: 'sw_omnipotent', name: '전지전능 창조주 검', icon: '🛐', cost: 20000000000, bonusAtk: 12000000000, desc: '존재하는 모든 실체를 자유로이 창조하고 소멸시키는 검' },
+            { id: 'sw_transcendent', name: '차원 초월자의 칼날', icon: '🌌✨', cost: 40000000000, bonusAtk: 25000000000, desc: '모든 차원의 공간 법칙을 베어버리는 최강의 무기' },
+            { id: 'sw_absolute_gorilla', name: '절대신 갓릴라 최고 존엄검', icon: '👑🦍⚡', cost: 100000000000, bonusAtk: 60000000000, desc: '세계관 완결! 우주 전체를 정복한 갓릴라의 최종 결정판 검' }
+        ];
+
+        // 초대형 무기 확장: 기존 무기와 별도로 500개의 새로운 검을 추가합니다.
+        // 고유 ID를 사용하므로 구매/장착/저장 기능과 그대로 호환됩니다.
+        (function addHundredsOfSwords() {
+            const prefixes = ['초월', '무한', '혼돈', '심연', '성운', '천공', '종말', '창세', '영겁', '차원', '폭풍', '심해', '황금', '암흑', '찬란', '절대', '신성', '광휘', '태초', '궁극'];
+            const cores = ['용왕', '광어신', '별빛', '번개', '화염', '빙하', '독룡', '운석', '블랙홀', '퀘이사', '고릴라', '용암', '태양', '달빛', '은하', '시간', '공허', '수호자', '파멸', '창조'];
+            const endings = ['참격검', '대검', '마검', '성검', '절단도', '파쇄검', '섬광도', '지배검', '심판검', '최종검', '폭풍도', '신검', '멸망도', '수호검', '차원검', '광휘검', '영혼도', '천벌검', '무한검', '궁극도'];
+            const icons = ['⚔️','🗡️','🔱','🔥','❄️','⚡','🌊','🌪️','🌌','☄️','💎','👑','🐉','🦍','🐟','🌑','☀️','🌀','✨','💫','🔮','🪐','♾️','💥','🛡️','🌈','🧿','🌠','⚛️','💠'];
+            const base = SWORDS_DATA[SWORDS_DATA.length - 1];
+            for (let i = 1; i <= 500; i++) {
+                const a = prefixes[(i - 1) % prefixes.length];
+                const b = cores[Math.floor((i - 1) / prefixes.length) % cores.length];
+                const c = endings[Math.floor((i - 1) / (prefixes.length * cores.length)) % endings.length];
+                const icon = icons[(i - 1) % icons.length] + (i % 7 === 0 ? '✨' : '');
+                SWORDS_DATA.push({
+                    id: `sw_extra_${i}`,
+                    name: `${a} ${b} ${c} ${i}호`,
+                    icon,
+                    cost: Math.ceil(base.cost * Math.pow(1.18, i)),
+                    bonusAtk: Math.ceil(base.bonusAtk * Math.pow(1.20, i)),
+                    desc: `${i}번째 신규 초월 무기! ${a}의 힘과 ${b}의 기운을 담아낸 특별한 검.`
+                });
+            }
+        })();
+
+        const DUNGEONS = [
+            { id: 1, name: '1단계: 잔디 동산', reqLv: 1, enemyEmoji: '🐛', enemyHp: 60, enemyAtk: 3, fishReward: 15, moveSpeed: 3.5 },
+            { id: 2, name: '2단계: 광어 동굴', reqLv: 3, enemyEmoji: '🦀', enemyHp: 180, enemyAtk: 8, fishReward: 45, moveSpeed: 4.0 },
+            { id: 3, name: '3단계: 바다 궁전', reqLv: 5, enemyEmoji: '🦈', enemyHp: 450, enemyAtk: 18, fishReward: 120, moveSpeed: 4.5 },
+            { id: 4, name: '4단계: 이건희 비밀요새', reqLv: 10, enemyEmoji: '🤖', enemyHp: 1200, enemyAtk: 35, fishReward: 300, moveSpeed: 5.0 },
+            { id: 5, name: '5단계: 심해 제단', reqLv: 12, enemyEmoji: '🐙', enemyHp: 3000, enemyAtk: 70, fishReward: 750, moveSpeed: 5.2 },
+            { id: 6, name: '6단계: 황금 산호초', reqLv: 15, enemyEmoji: '🔱', enemyHp: 8000, enemyAtk: 140, fishReward: 1800, moveSpeed: 5.5 },
+            { id: 7, name: '7단계: 빙하 마왕성', reqLv: 20, enemyEmoji: '🧊', enemyHp: 20000, enemyAtk: 280, fishReward: 4500, moveSpeed: 5.8 },
+            { id: 8, name: '8단계: 화산용의 둥지', reqLv: 25, enemyEmoji: '🐉', enemyHp: 50000, enemyAtk: 550, fishReward: 12000, moveSpeed: 6.0 },
+            { id: 9, name: '9단계: 천공의 신전', reqLv: 30, enemyEmoji: '⚡', enemyHp: 130000, enemyAtk: 1200, fishReward: 30000, moveSpeed: 6.2 },
+            { id: 10, name: '10단계: 우주 최강 요새', reqLv: 40, enemyEmoji: '🪐', enemyHp: 350000, enemyAtk: 2500, fishReward: 80000, moveSpeed: 6.5 },
+            { id: 11, name: '11단계: 심연의 괴수굴', reqLv: 45, enemyEmoji: '👾', enemyHp: 900000, enemyAtk: 5200, fishReward: 200000, moveSpeed: 6.8 },
+            { id: 12, name: '12단계: 초신성 폭발지대', reqLv: 50, enemyEmoji: '💥', enemyHp: 2200000, enemyAtk: 11000, fishReward: 500000, moveSpeed: 7.0 },
+            { id: 13, name: '13단계: 지옥마왕 사원', reqLv: 55, enemyEmoji: '👹', enemyHp: 5500000, enemyAtk: 24000, fishReward: 1300000, moveSpeed: 7.2 },
+            { id: 14, name: '14단계: 시공간 비틀림 영역', reqLv: 60, enemyEmoji: '🌀', enemyHp: 14000000, enemyAtk: 55000, fishReward: 3500000, moveSpeed: 7.5 },
+            { id: 15, name: '15단계: 차원 파괴자 탑', reqLv: 65, enemyEmoji: '☄️', enemyHp: 35000000, enemyAtk: 120000, fishReward: 9000000, moveSpeed: 7.8 },
+            { id: 16, name: '16단계: 신화룡의 소굴', reqLv: 70, enemyEmoji: '🐲', enemyHp: 90000000, enemyAtk: 280000, fishReward: 24000000, moveSpeed: 8.0 },
+            { id: 17, name: '17단계: 절대신의 정원', reqLv: 75, enemyEmoji: '✨', enemyHp: 240000000, enemyAtk: 650000, fishReward: 65000000, moveSpeed: 8.2 },
+            { id: 18, name: '18단계: 은하 제국 본부', reqLv: 80, enemyEmoji: '🛸', enemyHp: 600000000, enemyAtk: 1500000, fishReward: 180000000, moveSpeed: 8.5 },
+            { id: 19, name: '19단계: 고릴라 신화 종말지', reqLv: 85, enemyEmoji: '🌋', enemyHp: 1500000000, enemyAtk: 3800000, fishReward: 500000000, moveSpeed: 8.8 },
+            { id: 20, name: '20단계: 전지전능 창조주의 제단', reqLv: 90, enemyEmoji: '👑', enemyHp: 4000000000, enemyAtk: 9500000, fishReward: 1500000000, moveSpeed: 9.2 },
+            { id: 21, name: '21단계: 암흑 성운 피라미드', reqLv: 95, enemyEmoji: '🔺', enemyHp: 10000000000, enemyAtk: 22000000, fishReward: 4000000000, moveSpeed: 9.4 },
+            { id: 22, name: '22단계: 다중 우주 충돌 지대', reqLv: 100, enemyEmoji: '🌌', enemyHp: 28000000000, enemyAtk: 55000000, fishReward: 10000000000, moveSpeed: 9.6 },
+            { id: 23, name: '23단계: 허무의 심연 제단', reqLv: 110, enemyEmoji: '🕳️', enemyHp: 80000000000, enemyAtk: 140000000, fishReward: 28000000000, moveSpeed: 9.8 },
+            { id: 24, name: '24단계: 시공의 환영 소환소', reqLv: 120, enemyEmoji: '🔮', enemyHp: 220000000000, enemyAtk: 350000000, fishReward: 80000000000, moveSpeed: 10.0 },
+            { id: 25, name: '25단계: 전지전능 광어 신전', reqLv: 130, enemyEmoji: '🛐', enemyHp: 650000000000, enemyAtk: 900000000, fishReward: 250000000000, moveSpeed: 10.2 },
+            { id: 26, name: '26단계: 태초의 빅뱅 발원지', reqLv: 140, enemyEmoji: '💥', enemyHp: 1800000000000, enemyAtk: 2200000000, fishReward: 700000000000, moveSpeed: 10.5 },
+            { id: 27, name: '27단계: 신들의 최후 전쟁터', reqLv: 150, enemyEmoji: '⚔️', enemyHp: 5000000000000, enemyAtk: 5500000000, fishReward: 2000000000000, moveSpeed: 10.8 },
+            { id: 28, name: '28단계: 영원의 차원 관문', reqLv: 160, enemyEmoji: '🚪', enemyHp: 15000000000000, enemyAtk: 14000000000, fishReward: 6000000000000, moveSpeed: 11.0 },
+            { id: 29, name: '29단계: 종말의 고릴라 제국', reqLv: 180, enemyEmoji: '🏰', enemyHp: 45000000000000, enemyAtk: 38000000000, fishReward: 18000000000000, moveSpeed: 11.3 },
+            { id: 30, name: '30단계: 무한 차원 지배자 왕좌', reqLv: 200, enemyEmoji: '♾️', enemyHp: 150000000000000, enemyAtk: 100000000000, fishReward: 60000000000000, moveSpeed: 11.6 },
+            { id: 31, name: '31단계: 별바다의 끝', reqLv: 215, enemyEmoji: '🌠', enemyHp: 450000000000000, enemyAtk: 265000000000, fishReward: 168000000000000, moveSpeed: 11.7 },
+            { id: 32, name: '32단계: 초거성 심장부', reqLv: 230, enemyEmoji: '🌟', enemyHp: 1350000000000000, enemyAtk: 702250000000, fishReward: 470400000000000, moveSpeed: 11.8 },
+            { id: 33, name: '33단계: 블랙홀 지배역', reqLv: 245, enemyEmoji: '🕳️', enemyHp: 4050000000000000, enemyAtk: 1860962500000, fishReward: 1317120000000000, moveSpeed: 12.0 },
+            { id: 34, name: '34단계: 시간의 감옥', reqLv: 260, enemyEmoji: '⏳', enemyHp: 12150000000000000, enemyAtk: 4931550625000, fishReward: 3687936000000000, moveSpeed: 12.1 },
+            { id: 35, name: '35단계: 고대 신들의 무덤', reqLv: 275, enemyEmoji: '⚱️', enemyHp: 36450000000000000, enemyAtk: 13068609156250, fishReward: 10326220799999996, moveSpeed: 12.2 },
+            { id: 36, name: '36단계: 혼돈의 폭풍해', reqLv: 290, enemyEmoji: '🌪️', enemyHp: 109350000000000000, enemyAtk: 34631814264062, fishReward: 28913418239999992, moveSpeed: 12.3 },
+            { id: 37, name: '37단계: 영겁의 용암계곡', reqLv: 305, enemyEmoji: '🌋', enemyHp: 328050000000000000, enemyAtk: 91774307799766, fishReward: 80957571071999968, moveSpeed: 12.4 },
+            { id: 38, name: '38단계: 초월자의 시험장', reqLv: 320, enemyEmoji: '🛡️', enemyHp: 984150000000000000, enemyAtk: 243201915669379, fishReward: 226681199001599904, moveSpeed: 12.6 },
+            { id: 39, name: '39단계: 무한 미궁', reqLv: 335, enemyEmoji: '🌀', enemyHp: 2952450000000000000, enemyAtk: 644485076523854, fishReward: 634707357204479616, moveSpeed: 12.7 },
+            { id: 40, name: '40단계: 우주의 심판대', reqLv: 350, enemyEmoji: '⚖️', enemyHp: 8857350000000000000, enemyAtk: 1707885452788213, fishReward: 1777180600172542976, moveSpeed: 12.8 },
+            { id: 41, name: '41단계: 태초의 바다', reqLv: 365, enemyEmoji: '🌊', enemyHp: 26572050000000000000, enemyAtk: 4525896449888764, fishReward: 4976105680483120128, moveSpeed: 12.9 },
+            { id: 42, name: '42단계: 멸망한 신세계', reqLv: 380, enemyEmoji: '🏚️', enemyHp: 79716150000000008192, enemyAtk: 11993625592205224, fishReward: 13933095905352734720, moveSpeed: 13.0 },
+            { id: 43, name: '43단계: 차원 융합지대', reqLv: 395, enemyEmoji: '🪐', enemyHp: 239148449999999991808, enemyAtk: 31783107819343840, fishReward: 39012668534987653120, moveSpeed: 13.2 },
+            { id: 44, name: '44단계: 천공 황제성', reqLv: 410, enemyEmoji: '🏯', enemyHp: 717445349999999975424, enemyAtk: 84225235721261184, fishReward: 109235471897965428736, moveSpeed: 13.3 },
+            { id: 45, name: '45단계: 심연의 왕좌', reqLv: 425, enemyEmoji: '👁️', enemyHp: 2152336049999999926272, enemyAtk: 223196874661342112, fishReward: 305859321314303213568, moveSpeed: 13.4 },
+            { id: 46, name: '46단계: 초신성 군락', reqLv: 440, enemyEmoji: '💫', enemyHp: 6457008150000000040960, enemyAtk: 591471717852556672, fishReward: 856406099680048840704, moveSpeed: 13.5 },
+            { id: 47, name: '47단계: 절대자의 감옥', reqLv: 455, enemyEmoji: '🔒', enemyHp: 19371024449999999074304, enemyAtk: 1567400052309274880, fishReward: 2397937079104136282112, moveSpeed: 13.6 },
+            { id: 48, name: '48단계: 영원 회랑', reqLv: 470, enemyEmoji: '♾️', enemyHp: 58113073349999997222912, enemyAtk: 4153610138619578880, fishReward: 6714223821491582009344, moveSpeed: 13.8 },
+            { id: 49, name: '49단계: 다중우주 심장', reqLv: 485, enemyEmoji: '🌌', enemyHp: 174339220049999983280128, enemyAtk: 11007066867341881344, fishReward: 18799826700176428367872, moveSpeed: 13.9 },
+            { id: 50, name: '50단계: 창조신의 대장간', reqLv: 500, enemyEmoji: '⚒️', enemyHp: 523017660150000016949248, enemyAtk: 29168727198455988224, fishReward: 52639514760493993558016, moveSpeed: 14.0 },
+            { id: 51, name: '51단계: 종말의 별무리', reqLv: 515, enemyEmoji: '☄️', enemyHp: 1569052980449999916630016, enemyAtk: 77297127075908370432, fishReward: 147390641329383168540672, moveSpeed: 14.1 },
+            { id: 52, name: '52단계: 신화의 마지막 바다', reqLv: 530, enemyEmoji: '🐉', enemyHp: 4707158941349999749890048, enemyAtk: 204837386751157141504, fishReward: 412693795722272845070336, moveSpeed: 14.2 },
+            { id: 53, name: '53단계: 운명의 파괴신전', reqLv: 545, enemyEmoji: '🔱', enemyHp: 14121476824049999249670144, enemyAtk: 542819074890566467584, fishReward: 1155542628022364019884032, moveSpeed: 14.4 },
+            { id: 54, name: '54단계: 무한 시간축', reqLv: 560, enemyEmoji: '⌛', enemyHp: 42364430472149997749010432, enemyAtk: 1438470548460001034240, fishReward: 3235519358462618826178560, moveSpeed: 14.5 },
+            { id: 55, name: '55단계: 궁극의 광어 성역', reqLv: 575, enemyEmoji: '🐟', enemyHp: 127093291416449993247031296, enemyAtk: 3811946953419002478592, fishReward: 9059454203695332713299968, moveSpeed: 14.6 },
+            { id: 56, name: '56단계: 우주 너머의 공허', reqLv: 590, enemyEmoji: '🌑', enemyHp: 381279874249350031280701440, enemyAtk: 10101659426560357171200, fishReward: 25366471770346932026736640, moveSpeed: 14.7 },
+            { id: 57, name: '57단계: 만물 창조의 문', reqLv: 605, enemyEmoji: '🚪', enemyHp: 1143839622748050025122627584, enemyAtk: 26769397480384941260800, fishReward: 71026120956971392494993408, moveSpeed: 14.8 },
+            { id: 58, name: '58단계: 절대 초월 전장', reqLv: 620, enemyEmoji: '⚔️', enemyHp: 3431518868244150075367882752, enemyAtk: 70938903323020089098240, fishReward: 198873138679519905857929216, moveSpeed: 15.0 },
+            { id: 59, name: '59단계: 갓릴라의 최종 시련', reqLv: 635, enemyEmoji: '🦍', enemyHp: 10294556604732449676347834368, enemyAtk: 187988093806003244498944, fishReward: 556844788302655681426620416, moveSpeed: 15.0 },
+            { id: 60, name: '60단계: 건희의 마지막 시련', reqLv: 650, enemyEmoji: '🧑‍💼', enemyHp: 30883669814197349029043503104, enemyAtk: 498168448585908562690048, fishReward: 1559165407247435990457909248, moveSpeed: 15.0 }
+        ];
+
+        const SPACE_DUNGEONS = [
+            { id: 61, name: '1단계: 달 기지', reqLv: 210, enemyEmoji: '🌕', enemyHp: 363000000000000, enemyAtk: 213000000000, fishReward: 133200000000000, moveSpeed: 11.9 },
+            { id: 62, name: '2단계: 화성의 붉은 황무지', reqLv: 220, enemyEmoji: '🔴', enemyHp: 598950000000000, enemyAtk: 302460000000, fishReward: 197136000000000, moveSpeed: 11.9 },
+            { id: 63, name: '3단계: 목성의 폭풍', reqLv: 230, enemyEmoji: '🌀', enemyHp: 988267500000000, enemyAtk: 429493200000, fishReward: 291761280000000, moveSpeed: 12.0 },
+            { id: 64, name: '4단계: 토성의 고리 요새', reqLv: 240, enemyEmoji: '🪐', enemyHp: 1630641375000000, enemyAtk: 609880344000, fishReward: 431806694400000, moveSpeed: 12.0 },
+            { id: 65, name: '5단계: 천왕성 얼음 바다', reqLv: 250, enemyEmoji: '🧊', enemyHp: 2690558268749999, enemyAtk: 866030088480, fishReward: 639073907712000, moveSpeed: 12.1 },
+            { id: 66, name: '6단계: 해왕성의 심해', reqLv: 260, enemyEmoji: '🔵', enemyHp: 4439421143437498, enemyAtk: 1229762725642, fishReward: 945829383413760, moveSpeed: 12.2 },
+            { id: 67, name: '7단계: 명왕성의 얼어붙은 왕국', reqLv: 270, enemyEmoji: '❄️', enemyHp: 7325044886671873, enemyAtk: 1746263070411, fishReward: 1399827487452365, moveSpeed: 12.2 },
+            { id: 68, name: '8단계: 소행성대 전투지', reqLv: 280, enemyEmoji: '☄️', enemyHp: 12086324063008588, enemyAtk: 2479693559984, fishReward: 2071744681429500, moveSpeed: 12.3 },
+            { id: 69, name: '9단계: 우주 해적 본거지', reqLv: 290, enemyEmoji: '🏴‍☠️', enemyHp: 19942434703964168, enemyAtk: 3521164855177, fishReward: 3066182128515660, moveSpeed: 12.3 },
+            { id: 70, name: '10단계: 외계 생명체 둥지', reqLv: 300, enemyEmoji: '👽', enemyHp: 32905017261540880, enemyAtk: 5000054094351, fishReward: 4537949550203176, moveSpeed: 12.4 },
+            { id: 71, name: '11단계: 화성 제국 성채', reqLv: 310, enemyEmoji: '🚀', enemyHp: 54293278481542448, enemyAtk: 7100076813979, fishReward: 6716165334300700, moveSpeed: 12.5 },
+            { id: 72, name: '12단계: 달의 뒷면', reqLv: 320, enemyEmoji: '🌑', enemyHp: 89583909494545040, enemyAtk: 10082109075850, fishReward: 9939924694765036, moveSpeed: 12.5 },
+            { id: 73, name: '13단계: 태양풍 폭풍지대', reqLv: 330, enemyEmoji: '☀️', enemyHp: 147813450665999296, enemyAtk: 14316594887707, fishReward: 14711088548252256, moveSpeed: 12.6 },
+            { id: 74, name: '14단계: 태양의 코로나', reqLv: 340, enemyEmoji: '🔥', enemyHp: 243892193598898816, enemyAtk: 20329564740543, fishReward: 21772411051413336, moveSpeed: 12.6 },
+            { id: 75, name: '15단계: 수성 용암 평원', reqLv: 350, enemyEmoji: '🌋', enemyHp: 402422119438183040, enemyAtk: 28867981931572, fishReward: 32223168356091736, moveSpeed: 12.7 },
+            { id: 76, name: '16단계: 금성 산성 구름', reqLv: 360, enemyEmoji: '🟠', enemyHp: 663996497073001984, enemyAtk: 40992534342832, fishReward: 47690289167015768, moveSpeed: 12.8 },
+            { id: 77, name: '17단계: 지구 방어 궤도', reqLv: 370, enemyEmoji: '🌍', enemyHp: 1095594220170453248, enemyAtk: 58209398766821, fishReward: 70581627967183336, moveSpeed: 12.8 },
+            { id: 78, name: '18단계: 우주 엘리베이터', reqLv: 380, enemyEmoji: '🛰️', enemyHp: 1807730463281247744, enemyAtk: 82657346248886, fishReward: 104460809391431328, moveSpeed: 12.9 },
+            { id: 79, name: '19단계: 오리온 성운', reqLv: 390, enemyEmoji: '🌌', enemyHp: 2982755264414058496, enemyAtk: 117373431673418, fishReward: 154601997899318368, moveSpeed: 12.9 },
+            { id: 80, name: '20단계: 독수리 성운', reqLv: 400, enemyEmoji: '🦅', enemyHp: 4921546186283196416, enemyAtk: 166670272976253, fishReward: 228810956890991200, moveSpeed: 13.0 },
+            { id: 81, name: '21단계: 말머리 성운', reqLv: 410, enemyEmoji: '🐴', enemyHp: 8120551207367273472, enemyAtk: 236671787626279, fishReward: 338640216198666944, moveSpeed: 13.1 },
+            { id: 82, name: '22단계: 창조의 기둥', reqLv: 420, enemyEmoji: '✨', enemyHp: 13398909492156002304, enemyAtk: 336073938429316, fishReward: 501187519974027136, moveSpeed: 13.1 },
+            { id: 83, name: '23단계: 초신성 잔해', reqLv: 430, enemyEmoji: '💥', enemyHp: 22108200662057402368, enemyAtk: 477224992569629, fishReward: 741757529561560192, moveSpeed: 13.2 },
+            { id: 84, name: '24단계: 펄서 관측소', reqLv: 440, enemyEmoji: '📡', enemyHp: 36478531092394704896, enemyAtk: 677659489448874, fishReward: 1097801143751108992, moveSpeed: 13.2 },
+            { id: 85, name: '25단계: 중성자별 표면', reqLv: 450, enemyEmoji: '⭐', enemyHp: 60189576302451261440, enemyAtk: 962276475017401, fishReward: 1624745692751641088, moveSpeed: 13.3 },
+            { id: 86, name: '26단계: 쌍성계 전장', reqLv: 460, enemyEmoji: '☯️', enemyHp: 99312800899044573184, enemyAtk: 1366432594524709, fishReward: 2404623625272429056, moveSpeed: 13.4 },
+            { id: 87, name: '27단계: 외계 문명 수도', reqLv: 470, enemyEmoji: '🏙️', enemyHp: 163866121483423547392, enemyAtk: 1940334284225086, fishReward: 3558842965403194880, moveSpeed: 13.4 },
+            { id: 88, name: '28단계: 은하 무역 연합', reqLv: 480, enemyEmoji: '🛸', enemyHp: 270379100447648808960, enemyAtk: 2755274683599623, fishReward: 5267087588796728320, moveSpeed: 13.5 },
+            { id: 89, name: '29단계: 은하 중심부', reqLv: 490, enemyEmoji: '🌠', enemyHp: 446125515738620559360, enemyAtk: 3912490050711464, fishReward: 7795289631419158528, moveSpeed: 13.5 },
+            { id: 90, name: '30단계: 은하수의 심장', reqLv: 500, enemyEmoji: '🌌', enemyHp: 736107100968723939328, enemyAtk: 5555735872010279, fishReward: 11537028654500354048, moveSpeed: 13.6 },
+            { id: 91, name: '31단계: 안드로메다 전초기지', reqLv: 510, enemyEmoji: '🔭', enemyHp: 1214576716598394486784, enemyAtk: 7889144938254595, fishReward: 17074802408660523008, moveSpeed: 13.7 },
+            { id: 92, name: '32단계: 은하 충돌 지대', reqLv: 520, enemyEmoji: '💫', enemyHp: 2004051582387350667264, enemyAtk: 11202585812321524, fishReward: 25270707564817575936, moveSpeed: 13.7 },
+            { id: 93, name: '33단계: 초거성의 왕관', reqLv: 530, enemyEmoji: '👑', enemyHp: 3306685110939128168448, enemyAtk: 15907671853496566, fishReward: 37400647195930009600, moveSpeed: 13.8 },
+            { id: 94, name: '34단계: 블랙홀 사건의 지평선', reqLv: 540, enemyEmoji: '🕳️', enemyHp: 5456030433049561792512, enemyAtk: 22588894031965120, fishReward: 55352957849976414208, moveSpeed: 13.8 },
+            { id: 95, name: '35단계: 블랙홀 내부', reqLv: 550, enemyEmoji: '⚫', enemyHp: 9002450214531774808064, enemyAtk: 32076229525390468, fishReward: 81922377617965088768, moveSpeed: 13.9 },
+            { id: 96, name: '36단계: 웜홀 미로', reqLv: 560, enemyEmoji: '🌀', enemyHp: 14854042853977429639168, enemyAtk: 45548245926054464, fishReward: 121245118874588332032, moveSpeed: 14.0 },
+            { id: 97, name: '37단계: 암흑물질 바다', reqLv: 570, enemyEmoji: '🌑', enemyHp: 24509170709062754500608, enemyAtk: 64678509214997336, fishReward: 179442775934390730752, moveSpeed: 14.0 },
+            { id: 98, name: '38단계: 암흑에너지 폭풍', reqLv: 580, enemyEmoji: '🌪️', enemyHp: 40440131669953544716288, enemyAtk: 91843483085296208, fishReward: 265575308382898257920, moveSpeed: 14.1 },
+            { id: 99, name: '39단계: 시간 왜곡 성운', reqLv: 590, enemyEmoji: '⏳', enemyHp: 66726217255423347523584, enemyAtk: 130417745981120608, fishReward: 393051456406689480704, moveSpeed: 14.1 },
+            { id: 100, name: '40단계: 평행우주 관문', reqLv: 600, enemyEmoji: '🚪', enemyHp: 110098258471448525930496, enemyAtk: 185193199293191264, fishReward: 581716155481900384256, moveSpeed: 14.2 },
+            { id: 101, name: '41단계: 다중우주 함대', reqLv: 610, enemyEmoji: '🚀', enemyHp: 181662126477890048491520, enemyAtk: 262974342996331584, fishReward: 860939910113212497920, moveSpeed: 14.3 },
+            { id: 102, name: '42단계: 우주 용왕의 궁전', reqLv: 620, enemyEmoji: '🐉', enemyHp: 299742508688518580011008, enemyAtk: 373423567054790848, fishReward: 1274191066967554654208, moveSpeed: 14.3 },
+            { id: 103, name: '43단계: 별의 창조 공장', reqLv: 630, enemyEmoji: '🏭', enemyHp: 494575139336055586553856, enemyAtk: 530261465217802944, fishReward: 1885802779111980793856, moveSpeed: 14.4 },
+            { id: 104, name: '44단계: 초신성 황제의 왕좌', reqLv: 640, enemyEmoji: '💥', enemyHp: 816048979904491727880192, enemyAtk: 752971280609280128, fishReward: 2790988113085731438592, moveSpeed: 14.4 },
+            { id: 105, name: '45단계: 우주 심판관의 법정', reqLv: 650, enemyEmoji: '⚖️', enemyHp: 1346480816842411236917248, enemyAtk: 1069219218465177728, fishReward: 4130662407366882361344, moveSpeed: 14.5 },
+            { id: 106, name: '46단계: 태초의 빅뱅', reqLv: 660, enemyEmoji: '🌋', enemyHp: 2221693347789978218790912, enemyAtk: 1518291290220552192, fishReward: 6113380362902986293248, moveSpeed: 14.6 },
+            { id: 107, name: '47단계: 우주 종말의 가장자리', reqLv: 670, enemyEmoji: '☄️', enemyHp: 3665794023853464047583232, enemyAtk: 2155973632113184256, fishReward: 9047802937096418623488, moveSpeed: 14.6 },
+            { id: 108, name: '48단계: 무한 은하 미궁', reqLv: 680, enemyEmoji: '♾️', enemyHp: 6048560139358214658457600, enemyAtk: 3061482557600721408, fishReward: 13390748346902699311104, moveSpeed: 14.7 },
+            { id: 109, name: '49단계: 우주 창조신의 성역', reqLv: 690, enemyEmoji: '🛐', enemyHp: 9980124229941055797067776, enemyAtk: 4347305231793024512, fishReward: 19818307553415995064320, moveSpeed: 14.7 },
+            { id: 110, name: '50단계: 갓릴라 우주 최종전', reqLv: 700, enemyEmoji: '🦍', enemyHp: 16467204979402740347174912, enemyAtk: 6173173429146093568, fishReward: 29331095179055671017472, moveSpeed: 14.8 }
+        ];
+
+        let activeDungeon = null;
+        let activeDungeonMode = 'dungeon';
+        let battleInterval = null;
+        let dungeonFishEarned = 0;
+        let dungeonBananaEarned = 0;
+        let totalKills = 0;
+        let enemiesList = [];
+        let tempAtkBuff = 1.0;
+
+        window.onload = function() {
+            loadSaveData();
+            if (!state.playerName || !String(state.playerName).trim()) {
+                document.getElementById('nicknameModal').classList.remove('hidden');
+                document.getElementById('nicknameInput').focus();
+            }
+            updateUI();
+            renderShopList();
+            renderDungeonList();
+            renderSpaceDungeonList();
+            renderRelics();
+            renderSkillBar();
+            renderSkillUpgradeList();
+            startCooldownTimerLoop();
+        };
+
+        function submitNickname(event) {
+            if (event) event.preventDefault();
+            const input = document.getElementById('nicknameInput');
+            const name = String(input.value || '').trim().replace(/[<>]/g, '').slice(0, 16);
+            if (!name) {
+                document.getElementById('nicknameError').classList.remove('hidden');
+                input.focus();
+                return false;
+            }
+            state.playerName = name;
+            saveGame();
+            document.getElementById('nicknameModal').classList.add('hidden');
+            renderPlayersList();
+            updateUI();
+            return false;
+        }
+
+        function saveGame() {
+            localStorage.setItem('gorilla_game_save_v3', JSON.stringify(state));
+        }
+
+        function loadSaveData() {
+            const saved = localStorage.getItem('gorilla_game_save_v3');
+            if (saved) {
+                try {
+                    state = { ...state, ...JSON.parse(saved) };
+                } catch(e) {}
+            }
+            if (!state.relicCounts) {
+                state.relicCounts = { common: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 };
+            }
+            if (!state.unlockedSkillIds) {
+                state.unlockedSkillIds = SKILLS_DATA.filter(s => state.level >= s.reqLv).map(s => s.id);
+            }
+            if (!state.skillLevels) {
+                state.skillLevels = {};
+            }
+            if (state.bananas === undefined) {
+                state.bananas = 0;
+            }
+            calculateMaxXp();
+            state.currentHp = getTotalMaxHp();
+        }
+
+        function confirmReset() {
+            if (confirm("모든 데이터를 초기화하시겠습니까?")) {
+                localStorage.removeItem('gorilla_game_save_v3');
+                location.reload();
+            }
+        }
+
+        function toggleTheme() {
+            state.darkMode = !state.darkMode;
+            const icon = document.getElementById('themeIcon');
+            if (state.darkMode) {
+                document.documentElement.classList.add('dark');
+                icon.className = 'fa-solid fa-sun text-amber-300';
+            } else {
+                document.documentElement.classList.remove('dark');
+                icon.className = 'fa-solid fa-moon text-slate-200';
+            }
+            saveGame();
+        }
+
+        function switchTab(tabName) {
+            if (tabName === 'spaceDungeon' && !state.spaceUnlocked) {
+                alert('🔒 우주 던전에 입장하려면 일반 던전 60스테이지의 건희 보스를 먼저 깨야 해! 화이팅! 💪');
+                return;
+            }
+            const mainView = document.getElementById('viewMain');
+            const shopView = document.getElementById('viewShop');
+            const dungeonView = document.getElementById('viewDungeon');
+            const spaceDungeonView = document.getElementById('viewSpaceDungeon');
+            const skillUpgradeView = document.getElementById('viewSkillUpgrade');
+            const playersView = document.getElementById('viewPlayers');
+            const developerView = document.getElementById('viewDeveloper');
+
+            const mainBtn = document.getElementById('tabMainBtn');
+            const shopBtn = document.getElementById('tabShopBtn');
+            const dungeonBtn = document.getElementById('tabDungeonBtn');
+            const spaceDungeonBtn = document.getElementById('tabSpaceDungeonBtn');
+            const skillUpgradeBtn = document.getElementById('tabSkillUpgradeBtn');
+            const playersBtn = document.getElementById('tabPlayersBtn');
+            const developerBtn = document.getElementById('tabDeveloperBtn');
+
+            [mainView, shopView, dungeonView, spaceDungeonView, skillUpgradeView, playersView, developerView].forEach(view => view.classList.add('hidden'));
+            const inactiveStyle = "py-2.5 rounded-xl font-game text-xs sm:text-sm transition flex items-center justify-center gap-1 text-slate-400 hover:text-slate-200";
+            const activeStyle = "py-2.5 rounded-xl font-game text-xs sm:text-sm transition flex items-center justify-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg";
+            [mainBtn, shopBtn, dungeonBtn, spaceDungeonBtn, skillUpgradeBtn, playersBtn, developerBtn].forEach(btn => btn.className = inactiveStyle);
+
+            if (tabName === 'main') {
+                mainView.classList.remove('hidden');
+                mainBtn.className = activeStyle;
+            } else if (tabName === 'shop') {
+                shopView.classList.remove('hidden');
+                shopBtn.className = activeStyle;
+                renderShopList();
+            } else if (tabName === 'dungeon') {
+                dungeonView.classList.remove('hidden');
+                dungeonBtn.className = activeStyle;
+                renderDungeonList();
+            } else if (tabName === 'spaceDungeon') {
+                spaceDungeonView.classList.remove('hidden');
+                spaceDungeonBtn.className = activeStyle;
+                renderSpaceDungeonList();
+            } else if (tabName === 'skillUpgrade') {
+                skillUpgradeView.classList.remove('hidden');
+                skillUpgradeBtn.className = activeStyle;
+                renderSkillUpgradeList();
+            } else if (tabName === 'players') {
+                playersView.classList.remove('hidden');
+                playersBtn.className = activeStyle;
+                renderPlayersList();
+            } else if (tabName === 'developer') {
+                developerView.classList.remove('hidden');
+                developerBtn.className = activeStyle;
+                renderDeveloperMode();
+            }
+        }
+
+        const playerSessionId = 'player_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        const playerSessionStorageKey = 'gorilla_game_player_sessions_v1';
+        function renderPlayersList() {
+            const container = document.getElementById('playersList');
+            if (!container) return;
+            let sessions = [];
+            try { sessions = JSON.parse(localStorage.getItem(playerSessionStorageKey) || '[]'); } catch (e) { sessions = []; }
+            const now = Date.now();
+            sessions = sessions.filter(player => player && now - Number(player.lastSeen || 0) < 30000);
+            const current = sessions.find(player => player.id === playerSessionId);
+            const playerData = {
+                id: playerSessionId,
+                name: (state.playerName || '고릴라 모험가'),
+                level: Number(state.level || 1),
+                lastSeen: now,
+                current: true
+            };
+            if (current) Object.assign(current, playerData);
+            else sessions.push(playerData);
+            try { localStorage.setItem(playerSessionStorageKey, JSON.stringify(sessions)); } catch (e) {}
+            if (!sessions.length) {
+                container.innerHTML = '<div class="p-4 rounded-xl bg-slate-900/70 text-center text-slate-400 text-sm">현재 접속자를 불러오지 못했어요.</div>';
+                return;
+            }
+            sessions.sort((a, b) => Number(b.level || 1) - Number(a.level || 1));
+            container.innerHTML = sessions.map(player => `
+                <div class="flex items-center gap-3 rounded-xl border ${player.id === playerSessionId ? 'border-cyan-500/60 bg-cyan-950/30' : 'border-slate-700 bg-slate-900/70'} p-3">
+                    <div class="w-11 h-11 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-2xl">🦍</div>
+                    <div class="min-w-0 flex-1"><div class="font-bold text-slate-100 truncate">${escapePlayerText(player.name || '고릴라 모험가')} ${player.id === playerSessionId ? '<span class="text-cyan-300 text-xs">(나)</span>' : ''}</div><div class="text-xs text-slate-400">레벨 ${Number(player.level || 1).toLocaleString()} · ${player.id === playerSessionId ? '접속 중' : '최근 활동'}</div></div>
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                </div>`).join('');
+            const ranking = document.getElementById('playersRanking');
+            if (ranking) ranking.innerHTML = sessions.map((player, index) => `
+                <div class="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900/80 p-3">
+                  <div class="w-8 text-center font-game ${index === 0 ? 'text-amber-300' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-orange-300' : 'text-slate-500'}">${index < 3 ? ['🥇','🥈','🥉'][index] : '#' + (index + 1)}</div>
+                  <div class="text-xl">🦍</div>
+                  <div class="min-w-0 flex-1"><div class="font-bold truncate">${escapePlayerText(player.name || '고릴라 모험가')}${player.id === playerSessionId ? ' <span class="text-cyan-300 text-xs">(나)</span>' : ''}</div><div class="text-xs text-slate-400">레벨 ${Number(player.level || 1).toLocaleString()}</div></div>
+                </div>`).join('') || '<div class="text-sm text-slate-400">랭킹 정보가 없어요.</div>';
+        }
+        function escapePlayerText(value) {
+            return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+        }
+        setInterval(() => {
+            try {
+                let sessions = JSON.parse(localStorage.getItem(playerSessionStorageKey) || '[]');
+                const now = Date.now();
+                sessions = sessions.filter(player => player && now - Number(player.lastSeen || 0) < 30000);
+                if (!state.playerName) return;
+                const entry = { id: playerSessionId, name: state.playerName, level: Number(state.level || 1), lastSeen: now, current: true };
+                const idx = sessions.findIndex(player => player.id === playerSessionId);
+                if (idx >= 0) sessions[idx] = entry; else sessions.push(entry);
+                localStorage.setItem(playerSessionStorageKey, JSON.stringify(sessions));
+                const view = document.getElementById('viewPlayers');
+                if (view && !view.classList.contains('hidden')) renderPlayersList();
+            } catch (e) {}
+        }, 5000);
+
+        // Client-only placeholder account gate. Change this value in source if needed;
+        // this is NOT secure authentication and must be replaced by server verification for online play.
+        const DEVELOPER_ACCOUNT_NAME = '개발자';
+        function renderDeveloperMode() {
+            const allowed = String(state.playerName || '').trim() === DEVELOPER_ACCOUNT_NAME;
+            document.getElementById('developerLocked').classList.toggle('hidden', allowed);
+            document.getElementById('developerControls').classList.toggle('hidden', !allowed);
+            if (!allowed) return;
+            const sessions = JSON.parse(localStorage.getItem(playerSessionStorageKey) || '[]').filter(p => p && Date.now() - Number(p.lastSeen || 0) < 30000);
+            const options = [{ id: playerSessionId, name: state.playerName || DEVELOPER_ACCOUNT_NAME, level: state.level, current: true }, ...sessions.filter(p => p.id !== playerSessionId)];
+            const target = document.getElementById('developerTarget');
+            target.innerHTML = options.map(p => `<option value="${escapePlayerText(p.id)}">${escapePlayerText(p.name || '고릴라 모험가')} (Lv.${Number(p.level || 1)})${p.id === playerSessionId ? ' · 이 기기' : ' · 같은 브라우저 세션'}</option>`).join('');
+            updateDeveloperRewardFields();
+        }
+        function updateDeveloperRewardFields() {
+            const type = document.getElementById('developerRewardType').value;
+            const box = document.getElementById('developerRewardFields');
+            const numberInput = (id, label, value='100') => `<label class="text-xs text-slate-300">${label}<input id="${id}" type="number" min="1" max="1000000000" value="${value}" class="mt-1 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-white"></label>`;
+            if (type === 'sword') box.innerHTML = `<label class="text-xs text-slate-300">검 선택<select id="developerSword" class="mt-1 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-white">${SWORDS_DATA.map(sw => `<option value="${escapePlayerText(sw.id)}">${escapePlayerText(sw.name)}</option>`).join('')}</select></label>`;
+            else if (type === 'currency') box.innerHTML = `<label class="text-xs text-slate-300">재화 종류<select id="developerCurrency" class="mt-1 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-white"><option value="fish">🐟 물고기</option><option value="bananas">🍌 바나나</option></select></label>` + numberInput('developerAmount','지급 수량');
+            else if (type === 'level') box.innerHTML = numberInput('developerAmount','올릴 레벨 수','10');
+            else if (type === 'title') box.innerHTML = `<label class="text-xs text-slate-300">칭호 이름<input id="developerTitle" maxlength="30" value="개발자의 축복" class="mt-1 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-white"></label>`;
+            else box.innerHTML = `<label class="text-xs text-slate-300">능력 선택<select id="developerAbility" class="mt-1 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-white"><option value="blessing">✨ 건희 축복 효과</option><option value="invincible">🛡️ 무적 축복 (표시용)</option><option value="power">⚡ 공격력 강화</option></select></label>` + numberInput('developerAmount','강화 수치','100');
+        }
+        function grantDeveloperReward() {
+            if (String(state.playerName || '').trim() !== DEVELOPER_ACCOUNT_NAME) { alert('개발자 계정이 아닙니다.'); return; }
+            const targetId = document.getElementById('developerTarget').value;
+            if (targetId !== playerSessionId) {
+                document.getElementById('developerResult').textContent = '다른 세션의 저장 데이터는 이 HTML에서 수정할 수 없어요. 실제 지급에는 온라인 서버가 필요합니다.';
+                return;
+            }
+            const type = document.getElementById('developerRewardType').value;
+            if (type === 'sword') {
+                const id = document.getElementById('developerSword').value;
+                const sword = SWORDS_DATA.find(sw => String(sw.id) === id);
+                if (!sword) return;
+                if (!state.ownedSwords.includes(sword.id)) state.ownedSwords.push(sword.id);
+                state.equippedSwordId = sword.id;
+                document.getElementById('developerResult').textContent = `⚔️ ${sword.name} 지급 완료! 장착했어요.`;
+            } else if (type === 'currency') {
+                const amount = Math.max(1, Math.min(1000000000, Number(document.getElementById('developerAmount').value) || 1));
+                const key = document.getElementById('developerCurrency').value;
+                state[key] = Math.max(0, Number(state[key] || 0)) + amount;
+                document.getElementById('developerResult').textContent = `지급 완료: ${amount.toLocaleString()} ${key === 'fish' ? '물고기' : '바나나'}`;
+            } else if (type === 'level') {
+                const amount = Math.max(1, Math.min(1000000, Number(document.getElementById('developerAmount').value) || 1));
+                state.level = Math.max(1, Number(state.level || 1)) + amount;
+                calculateMaxXp(); state.xp = 0; state.currentHp = getTotalMaxHp();
+                document.getElementById('developerResult').textContent = `레벨 ${amount.toLocaleString()} 상승 완료! 현재 레벨 ${state.level.toLocaleString()}`;
+            } else if (type === 'title') {
+                const title = String(document.getElementById('developerTitle').value || '').trim().slice(0,30);
+                if (!title) { alert('칭호 이름을 입력해 줘.'); return; }
+                state.developerTitles = Array.isArray(state.developerTitles) ? state.developerTitles : [];
+                if (!state.developerTitles.includes(title)) state.developerTitles.push(title);
+                state.activeDeveloperTitle = title;
+                document.getElementById('developerResult').textContent = `👑 칭호 '${title}' 지급 완료!`;
+            } else {
+                const amount = Math.max(1, Math.min(1000000000, Number(document.getElementById('developerAmount').value) || 1));
+                const ability = document.getElementById('developerAbility').value;
+                state.developerAbilities = state.developerAbilities || {};
+                state.developerAbilities[ability] = Math.max(Number(state.developerAbilities[ability] || 0), amount);
+                if (ability === 'power') state.baseAtk = Number(state.baseAtk || 10) + amount;
+                document.getElementById('developerResult').textContent = `✨ 특별 능력 지급 완료: ${ability}`;
+            }
+            saveGame(); updateUI(); renderShopList(); renderDeveloperMode();
+        }
+
+        function openNpcModal() {
+            document.getElementById('npcModal').classList.remove('hidden');
+        }
+
+        function closeNpcModal() {
+            document.getElementById('npcModal').classList.add('hidden');
+        }
+
+        function startCooldownTimerLoop() {
+            setInterval(() => {
+                const now = Date.now();
+                SKILLS_DATA.forEach(s => {
+                    const cdOverlay = document.getElementById(`cd_overlay_${s.id}`);
+                    if (cdOverlay) {
+                        const expire = skillCooldowns[s.id] || 0;
+                        if (now < expire) {
+                            const remaining = Math.ceil((expire - now) / 1000);
+                            cdOverlay.innerText = `${remaining}s`;
+                            cdOverlay.classList.remove('hidden');
+                        } else {
+                            cdOverlay.classList.add('hidden');
+                        }
+                    }
+                });
+            }, 200);
+        }
+
+        function getSkillLevel(skillId) {
+            return state.skillLevels[skillId] || 1;
+        }
+
+        function getSkillMult(skill) {
+            const lv = getSkillLevel(skill.id);
+            return skill.mult + ((lv - 1) * skill.multPerLv);
+        }
+
+        function getSkillUpgradeCost(skill) {
+            const lv = getSkillLevel(skill.id);
+            return Math.round(skill.baseBananaCost * Math.pow(1.5, lv - 1));
+        }
+
+        function calculateMaxXp() {
+            state.maxXp = Math.round(20 * Math.pow(state.level, 2.3));
+        }
+
+        function getTotalAtk() {
+            let swordAtk = 0;
+            const sw = SWORDS_DATA.find(s => s.id === state.equippedSwordId);
+            if (sw) swordAtk = sw.bonusAtk;
+
+            const relicAtk = (state.relicCounts.common * 5) + 
+                             (state.relicCounts.rare * 15) + 
+                             (state.relicCounts.epic * 40) + 
+                             (state.relicCounts.legendary * 120) + 
+                             (state.relicCounts.mythic * 350);
+
+            return Math.round((state.baseAtk + swordAtk + relicAtk) * tempAtkBuff);
+        }
+
+        function getTotalMaxHp() {
+            const relicHp = (state.relicCounts.common * 20) + 
+                            (state.relicCounts.rare * 60) + 
+                            (state.relicCounts.epic * 150) + 
+                            (state.relicCounts.legendary * 450) + 
+                            (state.relicCounts.mythic * 1200);
+
+            return state.baseMaxHp + relicHp;
+        }
+
+        function updateUI() {
+            // Level & Title
+            let title = `LV.${state.level} `;
+            if (state.level < 10) title += '아기 고릴라 👶🦍';
+            else if (state.level < 25) title += '청소년 고릴라 🎒🦍';
+            else if (state.level < 50) title += '물 만난 킹 고릴라 👑🦍';
+            else if (state.level < 80) title += '전설의 해신 고릴라 🌊🦍';
+            else title += '전지전능 신화 고릴라 ⚡🦍';
+
+            const gorillaTitleEl = document.getElementById('gorillaTitle');
+            if (gorillaTitleEl) gorillaTitleEl.innerText = title;
+
+            // Stats
+            const statAtkEl = document.getElementById('statAtk');
+            if (statAtkEl) statAtkEl.innerText = getTotalAtk().toLocaleString();
+
+            const maxHp = getTotalMaxHp();
+            if (state.currentHp > maxHp) state.currentHp = maxHp;
+
+            const statHpEl = document.getElementById('statHp');
+            if (statHpEl) statHpEl.innerText = `${Math.round(state.currentHp).toLocaleString()} / ${maxHp.toLocaleString()}`;
+
+            // XP
+            const xpTextEl = document.getElementById('xpText');
+            if (xpTextEl) xpTextEl.innerText = `${state.xp.toLocaleString()} / ${state.maxXp.toLocaleString()} 광어`;
+
+            const pct = Math.min(100, Math.max(0, (state.xp / state.maxXp) * 100));
+            const xpBarEl = document.getElementById('xpBar');
+            if (xpBarEl) xpBarEl.style.width = `${pct}%`;
+
+            // Currencies count
+            const fishCountEl = document.getElementById('fishCount');
+            if (fishCountEl) fishCountEl.innerText = state.fish.toLocaleString();
+
+            const bananaCountEl = document.getElementById('bananaCount');
+            if (bananaCountEl) bananaCountEl.innerText = state.bananas.toLocaleString();
+
+            // Equipped Sword badge
+            const sw = SWORDS_DATA.find(s => s.id === state.equippedSwordId);
+            const badgeEl = document.getElementById('equippedSwordBadgeName');
+            if (badgeEl) {
+                if (sw) {
+                    badgeEl.innerText = `${sw.icon} ${sw.name} (+${sw.bonusAtk.toLocaleString()})`;
+                } else {
+                    badgeEl.innerText = "장착 무기 없음";
+                }
+            }
+
+            // Gorilla Visual Upgrades
+            const aura = document.getElementById('evolutionAura');
+            const halo = document.getElementById('godHaloRing');
+            const avatarBox = document.getElementById('gorillaAvatarBox');
+
+            if (avatarBox && aura && halo) {
+                if (state.level >= 50) {
+                    aura.classList.remove('hidden');
+                    halo.classList.remove('hidden');
+                    avatarBox.innerHTML = `<img src="${EVOLVED_GORILLA_IMG}" class="gorilla-evolved-img" alt="🦍" onerror="this.onerror=null;this.parentElement.innerHTML='🦍';this.parentElement.style.fontSize='4rem';" />`;
+                } else if (state.level >= 25) {
+                    aura.classList.remove('hidden');
+                    halo.classList.add('hidden');
+                    avatarBox.innerHTML = `<span id="mainGorillaEmoji" class="text-7xl select-none">🦍</span>`;
+                } else {
+                    aura.classList.add('hidden');
+                    halo.classList.add('hidden');
+                    avatarBox.innerHTML = `<span id="mainGorillaEmoji" class="text-7xl select-none">🦍</span>`;
+                }
+            }
+
+            renderRelics();
+        }
+
+        function renderSkillUpgradeList() {
+            const container = document.getElementById('skillUpgradeListContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            SKILLS_DATA.forEach(s => {
+                const isUnlocked = state.unlockedSkillIds.includes(s.id);
+                const lv = getSkillLevel(s.id);
+                const cost = getSkillUpgradeCost(s);
+                const currentMult = getSkillMult(s);
+                const nextMult = currentMult + s.multPerLv;
+
+                const item = document.createElement('div');
+                item.className = `p-3.5 rounded-2xl border flex items-center justify-between gap-2 transition ${
+                    isUnlocked ? 'bg-slate-900/80 border-slate-700/80' : 'bg-slate-950/60 border-slate-800 opacity-60'
+                }`;
+
+                let rightAction = '';
+                if (isUnlocked) {
+                    const canAfford = state.bananas >= cost;
+                    rightAction = `<button onclick="upgradeSkill(${s.id})" class="px-3.5 py-2 ${canAfford ? 'bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950' : 'bg-slate-700 text-slate-500 cursor-not-allowed'} font-game text-xs rounded-xl shadow transition active:scale-95">
+                        🍌 ${cost.toLocaleString()} 강화
+                    </button>`;
+                } else {
+                    rightAction = `<span class="text-xs text-slate-500 font-bold bg-slate-800 px-2.5 py-1 rounded-xl">LV.${s.reqLv} 해금</span>`;
+                }
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="text-3xl bg-slate-800 p-2 rounded-2xl border border-slate-700/80 flex items-center justify-center">${s.icon}</div>
+                        <div>
+                            <div class="font-game text-base text-amber-200 flex items-center gap-1.5">
+                                <span>${s.name}</span>
+                                <span class="text-xs text-yellow-400">Lv.${lv}</span>
+                            </div>
+                            <div class="text-xs text-slate-400 font-sans mt-0.5">${s.desc}</div>
+                            <div class="text-xs text-emerald-400 font-bold mt-0.5">
+                                피해량 배율: ${currentMult.toFixed(1)}x ${isUnlocked ? `<span class="text-amber-300">→ ${nextMult.toFixed(1)}x</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div>${rightAction}</div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function upgradeSkill(skillId) {
+            const skill = SKILLS_DATA.find(s => s.id === skillId);
+            if (!skill || !state.unlockedSkillIds.includes(skillId)) return;
+
+            const cost = getSkillUpgradeCost(skill);
+            if (state.bananas < cost) return;
+
+            state.bananas -= cost;
+            state.skillLevels[skillId] = getSkillLevel(skillId) + 1;
+
+            updateUI();
+            renderSkillUpgradeList();
+            renderSkillBar();
+            saveGame();
+        }
+
+        function renderShopList() {
+            const container = document.getElementById('swordShopContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            SWORDS_DATA.forEach((sw, idx) => {
+                const isOwned = state.ownedSwords.includes(sw.id);
+                const isEquipped = state.equippedSwordId === sw.id;
+
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-2xl border flex items-center justify-between gap-3 transition ${
+                    isEquipped ? 'bg-amber-950/40 border-amber-500/80 shadow-md' : 'bg-slate-900/80 border-slate-700/80'
+                }`;
+
+                let btnHtml = '';
+                if (isEquipped) {
+                    btnHtml = `<span class="px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 rounded-xl text-xs font-game">장착 중</span>`;
+                } else if (isOwned) {
+                    btnHtml = `<button onclick="equipSword('${sw.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-game text-xs rounded-xl shadow transition active:scale-95">장착하기</button>`;
+                } else {
+                    const canAfford = state.fish >= sw.cost;
+                    btnHtml = `<button onclick="buySword('${sw.id}')" class="px-3 py-1.5 ${canAfford ? 'bg-amber-500 hover:bg-amber-400 text-slate-950' : 'bg-slate-700 text-slate-500 cursor-not-allowed'} font-game text-xs rounded-xl shadow transition active:scale-95">
+                        🐟 ${sw.cost.toLocaleString()} 구매
+                    </button>`;
+                }
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="text-3xl bg-slate-800 p-2 rounded-2xl border border-slate-700/80 flex items-center justify-center min-w-[50px] min-h-[50px]">${sw.icon}</div>
+                        <div>
+                            <div class="font-game text-base text-amber-200 flex items-center gap-2">
+                                <span>${idx + 1}. ${sw.name}</span>
+                            </div>
+                            <div class="text-xs text-rose-400 font-bold">공격력 +${sw.bonusAtk.toLocaleString()}</div>
+                            <div class="text-[11px] text-slate-400 font-sans mt-0.5">${sw.desc}</div>
+                        </div>
+                    </div>
+                    <div>${btnHtml}</div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function buySword(id) {
+            const sw = SWORDS_DATA.find(s => s.id === id);
+            if (!sw || state.fish < sw.cost) return;
+
+            state.fish -= sw.cost;
+            state.ownedSwords.push(sw.id);
+            state.equippedSwordId = sw.id;
+
+            updateUI();
+            renderShopList();
+            saveGame();
+        }
+
+        function equipSword(id) {
+            if (state.ownedSwords.includes(id)) {
+                state.equippedSwordId = id;
+                updateUI();
+                renderShopList();
+                saveGame();
+            }
+        }
+
+        function renderDungeonList() {
+            const container = document.getElementById('dungeonList');
+            if (!container) return;
+            container.innerHTML = '';
+
+            DUNGEONS.forEach(d => {
+                const isUnlocked = state.level >= d.reqLv;
+                const bananaAmount = 1 + ((d.id - 1) * 2);
+
+                const item = document.createElement('div');
+                item.className = `p-3.5 rounded-2xl border flex items-center justify-between gap-2 transition ${
+                    isUnlocked ? 'bg-slate-900/90 border-slate-700 hover:border-amber-500/50' : 'bg-slate-950/60 border-slate-800 opacity-60'
+                }`;
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="text-3xl bg-slate-800 p-2 rounded-2xl border border-slate-700/80">${d.enemyEmoji}</div>
+                        <div>
+                            <div class="font-game text-base ${isUnlocked ? 'text-amber-300' : 'text-slate-500'}">${d.name}</div>
+                            <div class="text-xs text-slate-400">
+                                HP: <span class="text-rose-400 font-bold">${d.enemyHp.toLocaleString()}</span> | 
+                                공격력: <span class="text-rose-300 font-bold">${d.enemyAtk.toLocaleString()}</span>
+                            </div>
+                            <div class="text-xs font-bold mt-0.5 flex items-center gap-2">
+                                <span class="text-cyan-300">🐟 ${d.fishReward.toLocaleString()}</span>
+                                <span class="text-yellow-300">🍌 ${bananaAmount}개 (50% 드롭)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        ${isUnlocked ? 
+                            `<button onclick="enterDungeon(${d.id})" class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-game text-xs rounded-xl shadow active:scale-95 transition">입장하기</button>` : 
+                            `<span class="text-xs text-rose-400 font-bold bg-rose-950/60 border border-rose-800/60 px-2.5 py-1 rounded-xl">LV.${d.reqLv} 필요</span>`
+                        }
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function getSpaceDungeonStats(d) {
+            // 우주 던전은 일반 던전보다 훨씬 강하게 조정합니다. 단계가 높을수록 추가로 강해집니다.
+            const stage = Math.max(1, d.id || 1);
+            return {
+                enemyHp: Math.ceil(d.enemyHp * (3 + stage * 0.12)),
+                enemyAtk: Math.ceil(d.enemyAtk * (2 + stage * 0.08)),
+                fishReward: Math.ceil(d.fishReward * 1.5),
+                moveSpeed: (d.moveSpeed || 4) * (1.15 + Math.min(stage, 50) * 0.005)
+            };
+        }
+
+        function renderSpaceDungeonList() {
+            const container = document.getElementById('spaceDungeonList');
+            const lockedNotice = document.getElementById('spaceDungeonLocked');
+            if (!container || !lockedNotice) return;
+            container.innerHTML = '';
+            const unlocked = !!state.spaceUnlocked;
+            lockedNotice.classList.toggle('hidden', unlocked);
+            container.classList.toggle('hidden', !unlocked);
+            if (!unlocked) return;
+
+            SPACE_DUNGEONS.forEach(d => {
+                const isUnlocked = state.level >= d.reqLv;
+                const stats = getSpaceDungeonStats(d);
+                const bananaAmount = 1 + ((d.id - 1) * 2);
+                const item = document.createElement('div');
+                item.className = `p-3.5 rounded-2xl border flex items-center justify-between gap-2 transition ${
+                    isUnlocked ? 'bg-indigo-950/50 border-indigo-700/70 hover:border-cyan-400/70' : 'bg-slate-950/60 border-slate-800 opacity-60'
+                }`;
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="text-3xl bg-slate-800 p-2 rounded-2xl border border-indigo-700/70">${d.enemyEmoji}</div>
+                        <div class="min-w-0">
+                            <div class="font-game text-base ${isUnlocked ? 'text-indigo-200' : 'text-slate-500'}">${d.name}</div>
+                            <div class="text-xs text-slate-400">HP: <span class="text-rose-400 font-bold">${stats.enemyHp.toLocaleString()}</span> | 공격력: <span class="text-rose-300 font-bold">${stats.enemyAtk.toLocaleString()}</span></div>
+                            <div class="text-[10px] text-fuchsia-300 font-bold mt-0.5">☠️ 우주 강화 몬스터 · 이동 속도 증가</div>
+                            <div class="text-xs font-bold mt-0.5 flex items-center gap-2">
+                                <span class="text-cyan-300">🐟 ${d.fishReward.toLocaleString()}</span>
+                                <span class="text-yellow-300">🍌 ${bananaAmount.toLocaleString()}개 (50% 드롭)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        ${isUnlocked
+                            ? `<button onclick="enterDungeon(${d.id}, 'spaceDungeon')" class="px-3 py-2 bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-400 hover:to-cyan-400 text-slate-950 font-game text-xs rounded-xl shadow active:scale-95 transition">입장하기</button>`
+                            : `<span class="text-xs text-rose-400 font-bold bg-rose-950/60 border border-rose-800/60 px-2.5 py-1 rounded-xl">LV.${d.reqLv} 필요</span>`}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function renderRelics() {
+            const container = document.getElementById('relicContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            RELICS_DATA.forEach(r => {
+                const count = state.relicCounts[r.id] || 0;
+                const item = document.createElement('div');
+                item.className = `p-2.5 bg-slate-800/80 rounded-xl border ${r.borderColor} flex items-center justify-between text-xs`;
+                item.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">${r.icon}</span>
+                        <div>
+                            <div class="font-game ${r.color} text-sm">${r.name} <span class="text-[10px] opacity-80">(${r.rarity})</span></div>
+                            <div class="text-[11px] text-slate-400">${r.desc}</div>
+                        </div>
+                    </div>
+                    <div class="font-game text-amber-300 text-sm bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-700">
+                        보유: ${count}개
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function enterDungeon(id, mode = 'dungeon') {
+            const source = mode === 'spaceDungeon' ? SPACE_DUNGEONS : DUNGEONS;
+            let d = source.find(item => item.id === id);
+            if (!d || state.level < d.reqLv) return;
+            if (mode === 'spaceDungeon' && !state.spaceUnlocked) return;
+
+            activeDungeonMode = mode;
+            // 우주 던전은 체력/공격력/이동 속도를 단계별로 강화한 전투용 데이터를 사용합니다.
+            activeDungeon = mode === 'spaceDungeon' ? { ...d, ...getSpaceDungeonStats(d) } : d;
+            d = activeDungeon;
+            dungeonFishEarned = 0;
+            dungeonBananaEarned = 0;
+            totalKills = 0;
+            enemiesList = [];
+
+            const battleArea = document.getElementById('dungeonBattleArea');
+            if (activeDungeonMode === 'spaceDungeon') {
+                // 우주 던전 전투 화면을 우주 던전 탭 안으로 옮겨 그 창에서 전투하게 함
+                document.getElementById('spaceDungeonSelectArea').classList.add('hidden');
+                document.getElementById('spaceDungeonBattleMount').appendChild(battleArea);
+            } else {
+                // 일반 던전 전투 화면은 일반 던전 탭 안에 유지
+                document.getElementById('viewDungeon').appendChild(battleArea);
+                document.getElementById('dungeonSelectArea').classList.add('hidden');
+            }
+            battleArea.classList.remove('hidden');
+            battleArea.classList.add('flex');
+
+            document.getElementById('activeDungeonName').innerText = d.name;
+            document.getElementById('killCountText').innerText = "0";
+            document.getElementById('battleEarnedFish').innerText = "0";
+            document.getElementById('battleEarnedBanana').innerText = "0";
+
+            state.currentHp = getTotalMaxHp();
+            updateDungeonHpDisplay();
+
+            // Set sword icon in dungeon
+            const sw = SWORDS_DATA.find(s => s.id === state.equippedSwordId);
+            document.getElementById('dungeonGorillaSwordIcon').innerText = sw ? sw.icon : '🗡️';
+
+            // Set gorilla avatar in dungeon
+            const box = document.getElementById('dungeonGorillaAvatarBox');
+            if (state.level >= 50) {
+                box.innerHTML = `<img src="${EVOLVED_GORILLA_IMG}" class="gorilla-evolved-img" alt="🦍" onerror="this.onerror=null;this.parentElement.innerHTML='🦍';this.parentElement.style.fontSize='2.5rem';" />`;
+            } else {
+                box.innerHTML = `<span id="dungeonGorillaEmoji" class="text-5xl select-none">🦍</span>`;
+            }
+
+            renderSkillBar();
+            startBattleLoop();
+        }
+
+        function leaveDungeon() {
+            if (battleInterval) {
+                clearInterval(battleInterval);
+                battleInterval = null;
+            }
+
+            // Remove all existing enemies
+            enemiesList.forEach(e => {
+                if (e.el && e.el.parentNode) {
+                    e.el.parentNode.removeChild(e.el);
+                }
+            });
+            enemiesList = [];
+            activeDungeon = null;
+
+            const battleArea = document.getElementById('dungeonBattleArea');
+            battleArea.classList.add('hidden');
+            battleArea.classList.remove('flex');
+            // 전투 종료 후 공용 전투 화면을 원래 일반 던전 탭으로 돌려놓음
+            document.getElementById('viewDungeon').appendChild(battleArea);
+            document.getElementById('dungeonSelectArea').classList.remove('hidden');
+            document.getElementById('spaceDungeonSelectArea').classList.remove('hidden');
+
+            switchTab('main');
+            updateUI();
+            saveGame();
+        }
+
+        function updateDungeonHpDisplay() {
+            const maxHp = getTotalMaxHp();
+            const pct = Math.max(0, Math.min(100, (state.currentHp / maxHp) * 100));
+            const bar = document.getElementById('dungeonGorillaHp');
+            if (bar) bar.style.width = `${pct}%`;
+            const text = document.getElementById('dungeonGorillaHpText');
+            if (text) text.innerText = `${Math.round(state.currentHp).toLocaleString()} / ${maxHp.toLocaleString()}`;
+        }
+
+        function startBattleLoop() {
+            if (battleInterval) clearInterval(battleInterval);
+
+            // Spawn enemy waves for active combat
+            battleInterval = setInterval(() => {
+                if (!activeDungeon) return;
+
+                // 1. Spawn Enemies
+                const enemyCap = activeDungeonMode === 'spaceDungeon' ? 20 : 15;
+                const spawnChance = activeDungeonMode === 'spaceDungeon' ? 0.92 : 0.8;
+                if (enemiesList.length < enemyCap && Math.random() < spawnChance) {
+                    spawnEnemy();
+                }
+
+                // 2. Move Enemies and handle collisions (Auto-attack removed; player attacks via tap/click)
+                for (let i = enemiesList.length - 1; i >= 0; i--) {
+                    const e = enemiesList[i];
+
+                    // Check if dead
+                    if (e.hp <= 0) {
+                        if (e.el && e.el.parentNode) e.el.parentNode.removeChild(e.el);
+                        enemiesList.splice(i, 1);
+
+                        // Final Kunhee boss unlocks the Space Dungeon.
+                        if (activeDungeonMode === 'dungeon' && activeDungeon.id === 60 && !state.spaceUnlocked) {
+                            state.spaceUnlocked = true;
+                            saveGame();
+                            renderSpaceDungeonList();
+                            setTimeout(() => {
+                                alert('축하합니다! 건희 보스를 처치하셨군요! 이제 우주로 갑시다!');
+                            }, 100);
+                        }
+
+                        // Rewards
+                        totalKills += 1;
+                        dungeonFishEarned += activeDungeon.fishReward;
+                        state.fish += activeDungeon.fishReward;
+
+                        // 50% Banana Drop Chance (Scaled by stage)
+                        if (Math.random() < 0.5) {
+                            const bananasGained = 1 + ((activeDungeon.id - 1) * 2);
+                            dungeonBananaEarned += bananasGained;
+                            state.bananas += bananasGained;
+                            spawnDamageText(`🍌 +${bananasGained}`, e.posX, 20, '#facc15');
+                        }
+
+                        document.getElementById('killCountText').innerText = totalKills.toLocaleString();
+                        document.getElementById('battleEarnedFish').innerText = dungeonFishEarned.toLocaleString();
+                        document.getElementById('battleEarnedBanana').innerText = dungeonBananaEarned.toLocaleString();
+                        document.getElementById('fishCount').innerText = state.fish.toLocaleString();
+                        document.getElementById('bananaCount').innerText = state.bananas.toLocaleString();
+
+                        // 1% Relic Drop Chance
+                        if (Math.random() < 0.01) {
+                            rollRelicDrop();
+                        }
+                        continue;
+                    }
+
+                    // Move towards gorilla (stop at gorilla collision area ~18% position)
+                    if (e.posX > 18) {
+                        e.posX -= e.speed;
+                        if (e.posX < 18) e.posX = 18;
+                    } else {
+                        // Enemy attacks gorilla on collision
+                        const now = Date.now();
+                        if (!e.lastAttackTime || now - e.lastAttackTime > 800) {
+                            e.lastAttackTime = now;
+                            state.currentHp -= activeDungeon.enemyAtk;
+                            spawnDamageText(`💥 -${activeDungeon.enemyAtk.toLocaleString()}`, 15, 60, '#ef4444');
+                            updateDungeonHpDisplay();
+
+                            if (state.currentHp <= 0) {
+                                state.currentHp = 0;
+                                updateDungeonHpDisplay();
+                                alert("고릴라가 체력을 모두 소모하여 마을로 귀환합니다!");
+                                leaveDungeon();
+                                return;
+                            }
+                        }
+                    }
+
+                    // Update DOM position
+                    if (e.el) {
+                        e.el.style.left = `${e.posX}%`;
+                        const hpPct = Math.max(0, Math.min(100, (e.hp / activeDungeon.enemyHp) * 100));
+                        const hpBar = e.el.querySelector('.enemy-hp-bar');
+                        if (hpBar) hpBar.style.width = `${hpPct}%`;
+                    }
+                }
+            }, 300);
+        }
+
+        // Manual Click/Tap Attack Handler
+        function handleManualAttack(event) {
+            // Ignore click if clicking skill buttons or quit buttons inside battle canvas
+            if (event.target.closest('button') || event.target.closest('#skillBarContainer')) return;
+            if (!activeDungeon || enemiesList.length === 0) return;
+
+            // Trigger Gorilla Attack Animation
+            const gorillaAvatar = document.getElementById('dungeonGorillaAvatarBox');
+            if (gorillaAvatar) {
+                gorillaAvatar.classList.remove('gorilla-attack-swing');
+                void gorillaAvatar.offsetWidth; // trigger reflow
+                gorillaAvatar.classList.add('gorilla-attack-swing');
+            }
+
+            const totalAtk = getTotalAtk();
+
+            // Find single closest enemy in front (smallest posX)
+            let targetEnemy = enemiesList[0];
+            for (let e of enemiesList) {
+                if (e.posX < targetEnemy.posX) {
+                    targetEnemy = e;
+                }
+            }
+
+            if (targetEnemy) {
+                targetEnemy.hp -= totalAtk;
+                spawnDamageText(`💥 -${totalAtk.toLocaleString()}`, targetEnemy.posX, 30, '#fbbf24');
+
+                // Render click FX at cursor position
+                const canvas = document.getElementById('battleCanvas');
+                const rect = canvas.getBoundingClientRect();
+                const clickX = event.clientX - rect.left;
+                const clickY = event.clientY - rect.top;
+
+                const hitFx = document.createElement('div');
+                hitFx.className = 'click-hit-effect';
+                const fxIcons = ['⚔️', '💥', '⚡', '🥊'];
+                hitFx.innerText = fxIcons[Math.floor(Math.random() * fxIcons.length)];
+                hitFx.style.left = `${clickX - 25}px`;
+                hitFx.style.top = `${clickY - 25}px`;
+                canvas.appendChild(hitFx);
+
+                setTimeout(() => hitFx.remove(), 700);
+            }
+        }
+
+        function spawnEnemy() {
+            const field = document.getElementById('fieldContainer');
+            if (!field || !activeDungeon) return;
+
+            const enemyId = Date.now() + Math.random();
+            const el = document.createElement('div');
+            el.className = 'absolute flex flex-col items-center justify-center transition-all duration-100 z-20';
+            
+            // X position starting from right (88% to 98%)
+            const startX = 88 + (Math.random() * 10);
+            el.style.left = `${startX}%`;
+            el.style.top = `${20 + Math.random() * 40}%`;
+
+            el.innerHTML = `
+                <div class="w-12 bg-slate-900/90 rounded-full h-2 border border-slate-700 overflow-hidden mb-0.5">
+                    <div class="enemy-hp-bar bg-rose-500 h-full w-full transition-all"></div>
+                </div>
+                <span class="text-4xl select-none filter drop-shadow-md animate-bounce">${activeDungeon.enemyEmoji}</span>
+            `;
+
+            field.appendChild(el);
+
+            enemiesList.push({
+                id: enemyId,
+                el: el,
+                hp: activeDungeon.enemyHp,
+                posX: startX,
+                speed: (activeDungeon.moveSpeed || 4) * (0.8 + Math.random() * 0.4),
+                lastAttackTime: 0
+            });
+        }
+
+        function spawnDamageText(text, leftPct, topPct, color = '#f59e0b') {
+            const field = document.getElementById('fieldContainer');
+            if (!field) return;
+
+            const pop = document.createElement('div');
+            pop.className = 'damage-pop font-game text-xl';
+            pop.style.left = `${leftPct}%`;
+            pop.style.top = `${topPct}%`;
+            pop.style.color = color;
+            pop.innerText = text;
+
+            field.appendChild(pop);
+            setTimeout(() => pop.remove(), 1200);
+        }
+
+        function rollRelicDrop() {
+            const roll = Math.random() * 100;
+            let current = 0;
+            for (let r of RELICS_DATA) {
+                current += r.dropWeight;
+                if (roll <= current) {
+                    state.relicCounts[r.id] = (state.relicCounts[r.id] || 0) + 1;
+                    spawnDamageText(`🏛️ [${r.name}] 획득!`, 50, 20, '#38bdf8');
+                    updateUI();
+                    saveGame();
+                    break;
+                }
+            }
+        }
+
+        function feedGorilla() {
+            if (state.fish < 1) return;
+            state.fish -= 1;
+            state.xp += 1;
+
+            if (state.xp >= state.maxXp) {
+                levelUp();
+            }
+
+            updateUI();
+            saveGame();
+        }
+
+        function feedAllGorilla() {
+            if (state.fish < 1) return;
+
+            let consumed = state.fish;
+            state.xp += consumed;
+            state.fish = 0;
+
+            let leveled = false;
+            while (state.xp >= state.maxXp) {
+                state.xp -= state.maxXp;
+                state.level += 1;
+                calculateMaxXp();
+                state.baseAtk += 8 + Math.floor(state.level * 1.5);
+                state.baseMaxHp += 25 + (state.level * 4);
+                leveled = true;
+            }
+
+            if (leveled) {
+                checkEvolutionAndNPC();
+            }
+
+            updateUI();
+            saveGame();
+        }
+
+        function levelUp() {
+            state.xp -= state.maxXp;
+            state.level += 1;
+            calculateMaxXp();
+            state.baseAtk += 8 + Math.floor(state.level * 1.5);
+            state.baseMaxHp += 25 + (state.level * 4);
+            state.currentHp = getTotalMaxHp();
+
+            checkEvolutionAndNPC();
+        }
+
+        function checkEvolutionAndNPC() {
+            // Check newly unlocked skills
+            const newlyUnlocked = SKILLS_DATA.filter(s => state.level >= s.reqLv && !state.unlockedSkillIds.includes(s.id));
+            if (newlyUnlocked.length > 0) {
+                newlyUnlocked.forEach(s => state.unlockedSkillIds.push(s.id));
+                showSkillUnlockModal(newlyUnlocked[newlyUnlocked.length - 1]);
+            }
+
+            if (state.level >= 10 && !state.hasMetKunhee) {
+                state.hasMetKunhee = true;
+                openNpcModal();
+            }
+            renderSkillBar();
+            renderSkillUpgradeList();
+        }
+
+        function showSkillUnlockModal(skill) {
+            document.getElementById('unlockedSkillIcon').innerText = skill.icon;
+            document.getElementById('unlockedSkillName').innerText = `[${skill.name}]`;
+            document.getElementById('unlockedSkillDesc').innerText = skill.desc;
+            document.getElementById('skillUnlockModal').classList.remove('hidden');
+        }
+
+        function closeSkillUnlockModal() {
+            document.getElementById('skillUnlockModal').classList.add('hidden');
+        }
+
+        function renderSkillBar() {
+            const container = document.getElementById('skillBarContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const unlockedSkills = SKILLS_DATA.filter(s => state.level >= s.reqLv);
+
+            if (unlockedSkills.length === 0) {
+                container.innerHTML = `<div class="col-span-5 text-center text-xs text-slate-500 font-game py-2">사용 가능한 스킬이 없습니다.</div>`;
+                return;
+            }
+
+            unlockedSkills.forEach(s => {
+                const lv = getSkillLevel(s.id);
+                const btn = document.createElement('button');
+                btn.id = `skill_btn_${s.id}`;
+                btn.onclick = () => useSkill(s.id);
+                btn.className = `relative p-1.5 rounded-xl border flex flex-col items-center justify-center text-xs font-game transition bg-slate-900 border-amber-500/40 hover:bg-slate-800 text-amber-300 shadow active:scale-95`;
+                btn.innerHTML = `
+                    <span class="text-base">${s.icon}</span>
+                    <span class="text-[10px] leading-tight mt-0.5">${s.name} <span class="text-yellow-400">Lv.${lv}</span></span>
+                    <div id="cd_overlay_${s.id}" class="hidden cooldown-overlay">0s</div>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function useSkill(id) {
+            const skill = SKILLS_DATA.find(s => s.id === id);
+            if (!skill || state.level < skill.reqLv || !activeDungeon) return;
+
+            const now = Date.now();
+            if (skillCooldowns[skill.id] && now < skillCooldowns[skill.id]) {
+                return;
+            }
+
+            if (skill.cd > 0) {
+                skillCooldowns[skill.id] = now + (skill.cd * 1000);
+            }
+
+            // 뾱뾱망치 (ID: 5) 전용 3연타 전진 연타 특수 처리
+            if (skill.id === 5) {
+                triggerHammerMultiSmash(skill);
+                return;
+            }
+
+            triggerSkillVisualFX(skill.id);
+
+            const mult = getSkillMult(skill);
+
+            // 1. Buff Skill
+            if (skill.targetType === 'buff') {
+                tempAtkBuff = 2.0;
+                const maxHp = getTotalMaxHp();
+                state.currentHp = Math.min(maxHp, state.currentHp + (maxHp * (0.4 + (mult - skill.mult))));
+                updateDungeonHpDisplay();
+                spawnDamageText("💖 HP 회복 & 공격력 버프!", 20, 40, '#ec4899');
+                setTimeout(() => { tempAtkBuff = 1.0; }, 8000);
+                return;
+            }
+
+            const hitAtk = Math.round(getTotalAtk() * mult);
+
+            if (enemiesList.length > 0) {
+                if (skill.targetType === 'single') {
+                    // Find closest front enemy and attack ONLY that enemy
+                    let targetEnemy = enemiesList[0];
+                    for (let e of enemiesList) {
+                        if (e.posX < targetEnemy.posX) {
+                            targetEnemy = e;
+                        }
+                    }
+                    if (targetEnemy) {
+                        targetEnemy.hp -= hitAtk;
+                        spawnDamageText(`🎯 -${hitAtk.toLocaleString()}`, targetEnemy.posX, 25, '#f59e0b');
+                    }
+                } else {
+                    // Range/Screen skill attacks all in range
+                    enemiesList.forEach(enemy => {
+                        enemy.hp -= hitAtk;
+                        spawnDamageText(`⚡ -${hitAtk.toLocaleString()}`, enemy.posX, 20 + Math.random() * 10, '#f59e0b');
+                    });
+                }
+            }
+        }
+
+        // 뾱뾱망치 전진 3연타 스킬 실행 함수
+        function triggerHammerMultiSmash(skill) {
+            const field = document.getElementById('fieldContainer');
+            if (!field || !activeDungeon) return;
+
+            const mult = getSkillMult(skill) / 3; // 3번 분할 타격
+            const hitAtk = Math.round(getTotalAtk() * mult);
+
+            // 전방으로 진행되는 3단계 X 위치 (%)
+            const stepPositions = [30, 50, 70];
+
+            stepPositions.forEach((posX, index) => {
+                setTimeout(() => {
+                    if (!activeDungeon) return;
+
+                    // 1. 망치 쾅 이펙트 생성
+                    const hammerEl = document.createElement('div');
+                    hammerEl.className = 'hammer-forward-smash';
+                    hammerEl.style.left = `${posX}%`;
+                    hammerEl.style.top = '20%';
+                    hammerEl.innerText = '🔨💥';
+                    field.appendChild(hammerEl);
+                    setTimeout(() => hammerEl.remove(), 600);
+
+                    // 2. 고릴라 모션 가볍게 출렁임
+                    const gorillaBox = document.getElementById('dungeonGorillaAvatarBox');
+                    if (gorillaBox) {
+                        gorillaBox.classList.remove('gorilla-attack-swing');
+                        void gorillaBox.offsetWidth;
+                        gorillaBox.classList.add('gorilla-attack-swing');
+                    }
+
+                    // 3. 충격파 범위 내의 적 타격
+                    const radius = 22;
+                    enemiesList.forEach(enemy => {
+                        if (Math.abs(enemy.posX - posX) <= radius) {
+                            enemy.hp -= hitAtk;
+                            spawnDamageText(`🔨 쾅! -${hitAtk.toLocaleString()}`, enemy.posX, 20 + Math.random() * 10, '#f59e0b');
+                        }
+                    });
+
+                }, index * 350); // 0.35초 간격으로 시원하게 3번 연타
+            });
+        }
+
+        function triggerSkillVisualFX(skillId) {
+            const field = document.getElementById('fieldContainer');
+            if (!field) return;
+            const makeFx = (className, html, duration) => {
+                const fx = document.createElement('div');
+                fx.className = 'skill-unique-fx ' + className;
+                fx.innerHTML = html;
+                field.appendChild(fx);
+                setTimeout(() => fx.remove(), duration);
+            };
+            if (skillId === 1) {
+                makeFx('banana-shot-fx', '<div class="banana-comet">🍌</div>', 900);
+            } else if (skillId === 2) {
+                makeFx('fish-spin-fx', '<div class="fish-vortex"><span>🐟</span><span>🐠</span></div>', 1050);
+            } else if (skillId === 3) {
+                makeFx('dance-fx-new', '<div class="disco-burst"></div><div class="disco-ring"></div><div class="disco-ring r2"></div><div class="disco-ring r3"></div><div class="disco-dancer">💃</div>', 1000);
+            } else if (skillId === 4) {
+                makeFx('kunhee-toss-wrap', '<div class="kunhee-toss-fx">🧑‍💼💫</div>', 1050);
+            } else if (skillId === 5) {
+                makeFx('hammer-fx-new', '<div class="puffy-hammer">🔨</div><div class="hammer-shock"></div>', 750);
+            } else if (skillId === 6) {
+                makeFx('fish-mirage-wrap', '<div class="fish-mirage"><span>🐟</span><span>🐠</span><span>🐟</span></div>', 900);
+            } else if (skillId === 7) {
+                makeFx('tidal-fx-new', '<div class="tidal-wall"></div>', 1050);
+            } else if (skillId === 8) {
+                makeFx('meteor-fx-new', '<div class="banana-meteor-new">☄️🍌</div>', 1100);
+            } else if (skillId === 9) {
+                makeFx('fish-cannon-wrap', '<div class="fish-cannon"></div>', 850);
+            } else if (skillId === 10) {
+                let sparks = '';
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 * i) / 8;
+                    sparks += `<span class="blessing-sparkle-new" style="--sx:${Math.cos(angle)*115}px;--sy:${Math.sin(angle)*95}px">✨</span>`;
+                }
+                makeFx('blessing-fx-new', `<div class="geonhee-blessing-new"><div class="blessing-halo-new"></div><div class="blessing-crown-new">💖👑</div>${sparks}</div>`, 1500);
+            } else if (skillId === 11) {
+                const fx = document.createElement('div');
+                fx.className = 'blackhole-fx';
+                fx.innerHTML = '<div class="blackhole-core">🐟</div>';
+                field.appendChild(fx);
+                setTimeout(() => fx.remove(), 1300);
+            } else if (skillId === 12) {
+                const fx = document.createElement('div');
+                fx.className = 'spacetime-fx';
+                fx.innerHTML = '<div class="spacetime-core">⏳💥</div>';
+                field.appendChild(fx);
+                setTimeout(() => fx.remove(), 1350);
+            } else if (skillId === 13) {
+                const fx = document.createElement('div');
+                fx.className = 'rage-fx';
+                fx.innerHTML = '<div class="rage-core">🤬🥊💥</div>';
+                field.appendChild(fx);
+                setTimeout(() => fx.remove(), 900);
+            } else if (skillId === 14) {
+                const fx = document.createElement('div');
+                fx.className = 'sun-fx';
+                fx.innerHTML = '<div class="sun-core">☀️</div>';
+                field.appendChild(fx);
+                setTimeout(() => fx.remove(), 1300);
+            } else if (skillId === 15) {
+                const fx = document.createElement('div');
+                fx.className = 'creator-fx';
+                fx.innerHTML = '<div class="creator-rays"></div><div class="creator-core">👑✨⚡</div>';
+                field.appendChild(fx);
+                setTimeout(() => fx.remove(), 1650);
+            }
+        }
+    </script>
+
+    <div id="nicknameModal" class="hidden fixed inset-0 z-[10000] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="nicknameTitle">
+      <form id="nicknameForm" class="w-full max-w-sm rounded-3xl border border-amber-500/50 bg-slate-800 p-6 shadow-2xl" onsubmit="return submitNickname(event)">
+        <div class="text-center text-5xl mb-3">🦍</div>
+        <h2 id="nicknameTitle" class="font-game text-xl text-amber-300 text-center mb-2">모험가 이름 정하기</h2>
+        <p class="text-sm text-slate-300 text-center mb-4">닉네임을 만들고 고릴라 모험을 시작해!</p>
+        <input id="nicknameInput" maxlength="16" minlength="1" autocomplete="nickname" required placeholder="닉네임 (최대 16자)" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none focus:border-amber-400" />
+        <p id="nicknameError" class="hidden text-rose-300 text-xs mt-2">닉네임을 1~16자로 입력해 줘.</p>
+        <button type="submit" class="mt-4 w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 font-bold text-white">게임 시작하기 🚀</button>
+      </form>
+    </div>
+    <button id="bgmToggleButton" type="button" aria-pressed="false" style="position:fixed;right:14px;bottom:14px;z-index:9999;padding:10px 14px;border-radius:14px;border:1px solid rgba(148,163,184,.65);background:rgba(15,23,42,.94);color:#f8fafc;font-weight:700;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.35);">
+        🎵 브금 켜기
+    </button>
+    <script>
+    (() => {
+      // A simple, original, gentle game background loop made with Web Audio.
+      let audioCtx = null, master = null, timer = null, running = false, starting = false;
+      let nextBeatAt = 0, step = 0;
+      const bpm = 88, beat = 60 / bpm;
+      const melody = [72, 76, 79, 76, 74, 77, 81, 77, 71, 74, 79, 74, 69, 72, 76, 72];
+      const chords = [[48,55,60,64],[45,52,57,60],[41,48,53,57],[43,50,55,59]];
+      function note(freq, start, duration, volume, wave='sine') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = wave;
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), start + 0.035);
+        gain.gain.setValueAtTime(Math.max(0.0002, volume), start + Math.max(0.05, duration * 0.55));
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(gain); gain.connect(master);
+        osc.start(start); osc.stop(start + duration + 0.03);
+      }
+      function schedule() {
+        while (nextBeatAt < audioCtx.currentTime + 0.35) {
+          const bar = Math.floor(step / 4) % chords.length;
+          const beatInBar = step % 4;
+          const chord = chords[bar];
+          if (beatInBar === 0) {
+            chord.forEach((m, i) => note(440 * Math.pow(2, (m - 69) / 12), nextBeatAt, beat * 3.7, i === 0 ? 0.045 : 0.018, 'sine'));
+            note(440 * Math.pow(2, (chord[0] - 12 - 69) / 12), nextBeatAt, beat * 1.6, 0.045, 'triangle');
+          } else if (beatInBar === 2) {
+            note(440 * Math.pow(2, (chord[0] - 12 - 69) / 12), nextBeatAt, beat * 1.3, 0.025, 'triangle');
+          }
+          const m = melody[step % melody.length];
+          note(440 * Math.pow(2, (m - 69) / 12), nextBeatAt, beat * 0.72, 0.028, 'triangle');
+          step++;
+          nextBeatAt += beat;
+        }
+      }
+      function start() {
+        if (running || starting) return;
+        starting = true;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) { starting = false; alert('이 브라우저에서는 배경 음악을 재생할 수 없어.'); return; }
+        if (!audioCtx) {
+          audioCtx = new AudioContextClass();
+          master = audioCtx.createGain(); master.gain.value = 0.45; master.connect(audioCtx.destination);
+        }
+        audioCtx.resume().then(() => {
+          starting = false;
+          if (running) return;
+          // Restore volume only when starting; stopping must remain silent.
+          const now = audioCtx.currentTime;
+          master.gain.cancelScheduledValues(now);
+          master.gain.setValueAtTime(0.45, now);
+          running = true; nextBeatAt = now + 0.08;
+          if (timer) window.clearInterval(timer);
+          timer = window.setInterval(schedule, 100);
+          const btn = document.getElementById('bgmToggleButton');
+          btn.textContent = '🔇 브금 끄기'; btn.setAttribute('aria-pressed','true');
+        }).catch(() => {
+          // Retry on the next user gesture if the browser blocks autoplay.
+          starting = false;
+          running = false;
+        });
+      }
+      function stop() {
+        running = false;
+        if (timer) window.clearInterval(timer);
+        timer = null;
+        if (master && audioCtx) {
+          const now = audioCtx.currentTime;
+          master.gain.cancelScheduledValues(now);
+          master.gain.setTargetAtTime(0, now, 0.06);
+          window.setTimeout(() => {
+            if (!running && master && audioCtx) {
+              // Keep gain at zero while suspended to avoid a brief audio pop.
+              master.gain.cancelScheduledValues(audioCtx.currentTime);
+              master.gain.setValueAtTime(0, audioCtx.currentTime);
+              audioCtx.suspend().catch(() => {});
+            }
+          }, 250);
+        }
+        const btn = document.getElementById('bgmToggleButton');
+        btn.textContent = '🎵 브금 켜기'; btn.setAttribute('aria-pressed','false');
+      }
+      const bgmButton = document.getElementById('bgmToggleButton');
+      bgmButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (running) stop(); else start();
+      });
+      // Manual playback only: music starts/stops only when the music button is pressed.
+    })();
+    </script>
+
+</body>
+</html>
